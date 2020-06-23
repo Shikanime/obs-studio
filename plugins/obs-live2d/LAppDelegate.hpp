@@ -98,19 +98,12 @@ private:
 	~LAppDelegate();
 
 	/**
-	 * @brief   Cubism SDK の初期化
-	 */
-	void InitializeCubism();
-
-	/**
 	 * @brief   CreateShader内部関数 エラーチェック
 	 */
 	bool CheckShader(GLuint shaderId);
 
-	LAppAllocator _cubismAllocator;             ///< Cubism SDK Allocator
-	Csm::CubismFramework::Option _cubismOption; ///< Cubism SDK Option
-	GLFWwindow *_window;                        ///< OpenGL ウィンドウ
-	LAppView *_view;                            ///< View情報
+	GLFWwindow *_window;                 ///< OpenGL ウィンドウ
+	LAppView *_view;                     ///< View情報
 	bool _captured;                      ///< クリックしているか
 	float _mouseX;                       ///< マウスX座標
 	float _mouseY;                       ///< マウスY座標

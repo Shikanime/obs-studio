@@ -45,17 +45,6 @@ void LAppDelegate::ReleaseInstance()
 	s_instance = NULL;
 }
 
-void LAppDelegate::Initialize()
-{
-	// Cubism SDK の初期化
-	_cubismOption.LogFunction = LAppPal::PrintMessage;
-	_cubismOption.LoggingLevel = LAppDefine::CubismLoggingLevel;
-	CubismFramework::StartUp(&_cubismAllocator, &_cubismOption);
-
-	//Initialize cubism
-	CubismFramework::Initialize();
-}
-
 void LAppDelegate::Release()
 {
 	// Windowの削除
@@ -63,19 +52,13 @@ void LAppDelegate::Release()
 
 	delete _textureManager;
 	delete _view;
-
-	// リソースを解放
-	LAppLive2DManager::ReleaseInstance();
-
-	//Cubism SDK の解放
-	CubismFramework::Dispose();
 }
 
 void LAppDelegate::Render()
 {
 	if (_isInit) {
 		// Windowの生成_
-		// glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
+		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 		_window = glfwCreateWindow(RenderTargetWidth,
 					   RenderTargetHeight,
 					   "Live2D Model Scene", NULL, NULL);
@@ -87,7 +70,6 @@ void LAppDelegate::Render()
 
 		// Windowのコンテキストをカレントに設定
 		glfwMakeContextCurrent(_window);
-		glfwSwapInterval(1);
 
 		if (glewInit() != GLEW_OK) {
 			bcrash("Can't initialize GLEW");
@@ -153,23 +135,22 @@ void LAppDelegate::Render()
 	gs_texture_t *texture =
 		gs_texture_create(width, height, GS_RGBA, 1, NULL, GS_DYNAMIC);
 
-	uint8_t *ptr;
+	uint8_t *buffer;
 	uint32_t linesize;
-	if (gs_texture_map(texture, &ptr, &linesize)) {
+	if (gs_texture_map(texture, &buffer, &linesize)) {
 		//描画更新
 		_view->Render();
+
+		glReadPixels(0, 0, _windowWidth, _windowHeight, GL_RGBA,
+			     GL_UNSIGNED_BYTE, buffer);
 	}
 	gs_texture_unmap(texture);
 	obs_source_draw(texture, 0, 0, 0, 0, true);
 	gs_texture_destroy(texture);
-
-	// バッファの入れ替え
-	glfwSwapBuffers(_window);
 }
 
 LAppDelegate::LAppDelegate()
-	: _cubismOption(),
-	  _window(NULL),
+	: _window(NULL),
 	  _captured(false),
 	  _mouseX(0.0f),
 	  _mouseY(0.0f),

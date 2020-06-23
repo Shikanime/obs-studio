@@ -8,6 +8,11 @@
 #include <obs-module.h>
 #include <GL/glew.h>
 #include "LAppDelegate.hpp"
+#include "LAppPal.hpp"
+#include "LAppLive2DManager.hpp"
+#include "LAppDefine.hpp"
+
+using namespace Csm;
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-live2d", "en-US")
@@ -27,7 +32,6 @@ static const char *live2d_getname([[maybe_unused]] void *type_data)
 static void *live2d_create([[maybe_unused]] obs_data_t *settings,
 			   [[maybe_unused]] obs_source_t *source)
 {
-	LAppDelegate::GetInstance()->Initialize();
 	return malloc(sizeof(obs_live2d_data));
 }
 
@@ -61,6 +65,11 @@ obs_properties_t *live2d_get_properties([[maybe_unused]] void *data)
 
 void live2d_update(void *data, obs_data_t *settings) {}
 
+namespace {
+LAppAllocator cubismAllocator;        ///< Cubism SDK Allocator
+CubismFramework::Option cubismOption; ///< Cubism SDK Option
+} // namespace
+
 bool obs_module_load()
 {
 	// GLFWの初期化
@@ -68,6 +77,17 @@ bool obs_module_load()
 		bcrash("Can't initialize GLFW");
 		return false;
 	}
+
+	// Cubism SDK の初期化
+	cubismOption.LogFunction = LAppPal::PrintMessage;
+	cubismOption.LoggingLevel = LAppDefine::CubismLoggingLevel;
+	if (!CubismFramework::StartUp(&cubismAllocator, &cubismOption)) {
+		bcrash("Can't start Cubism Framework");
+		return false;
+	}
+
+	//Initialize cubism
+	CubismFramework::Initialize();
 
 	struct obs_source_info info = {};
 	info.id = "obs_live2d";
@@ -91,6 +111,12 @@ bool obs_module_load()
 void obs_module_unload()
 {
 	glfwTerminate();
+
+	// リソースを解放
+	LAppLive2DManager::ReleaseInstance();
+
+	//Cubism SDK の解放
+	CubismFramework::Dispose();
 
 	LAppDelegate::ReleaseInstance();
 }
