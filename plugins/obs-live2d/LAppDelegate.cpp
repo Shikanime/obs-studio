@@ -87,12 +87,6 @@ void LAppDelegate::Render()
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		//コールバック関数の登録
-		glfwSetMouseButtonCallback(_window,
-					   EventHandler::OnMouseCallBack);
-		glfwSetCursorPosCallback(_window,
-					 EventHandler::OnMouseCallBack);
-
 		//load model
 		LAppLive2DManager::GetInstance();
 
@@ -163,37 +157,6 @@ LAppDelegate::LAppDelegate()
 }
 
 LAppDelegate::~LAppDelegate() {}
-
-void LAppDelegate::OnMouseCallBack(GLFWwindow *window, int button, int action,
-				   int modify)
-{
-	if (_view == NULL) {
-		return;
-	}
-	if (GLFW_MOUSE_BUTTON_LEFT != button) {
-		return;
-	}
-
-	if (GLFW_PRESS == action) {
-		_captured = true;
-		_view->OnTouchesBegan(_mouseX, _mouseY);
-	}
-}
-
-void LAppDelegate::OnMouseCallBack(GLFWwindow *window, double x, double y)
-{
-	_mouseX = static_cast<float>(x);
-	_mouseY = static_cast<float>(y);
-
-	if (!_captured) {
-		return;
-	}
-	if (_view == NULL) {
-		return;
-	}
-
-	_view->OnTouchesMoved(_mouseX, _mouseY);
-}
 
 GLuint LAppDelegate::CreateShader()
 {

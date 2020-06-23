@@ -114,9 +114,7 @@ set(obs-live2d_SOURCES
 	LAppTextureManager.hpp
 	LAppView.cpp
 	LAppView.hpp
-	obs-live2d-plugin.cpp
-	TouchManager.cpp
-	TouchManager.hpp)
+	obs-live2d-plugin.cpp)
 
 if(WIN32)
 	set(MODULE_DESCRIPTION "OBS Live2D module")

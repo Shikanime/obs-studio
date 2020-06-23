@@ -113,24 +113,3 @@ private:
 	int _windowWidth; ///< Initialize関数で設定したウィンドウ幅
 	int _windowHeight; ///< Initialize関数で設定したウィンドウ高さ
 };
-
-class EventHandler {
-public:
-	/**
-	 * @brief   glfwSetMouseButtonCallback用コールバック関数。
-	 */
-	static void OnMouseCallBack(GLFWwindow *window, int button, int action,
-				    int modify)
-	{
-		LAppDelegate::GetInstance()->OnMouseCallBack(window, button,
-							     action, modify);
-	}
-
-	/**
-	 * @brief   glfwSetCursorPosCallback用コールバック関数。
-	 */
-	static void OnMouseCallBack(GLFWwindow *window, double x, double y)
-	{
-		LAppDelegate::GetInstance()->OnMouseCallBack(window, x, y);
-	}
-};

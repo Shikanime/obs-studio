@@ -14,7 +14,6 @@
 #include "LAppLive2DManager.hpp"
 #include "LAppTextureManager.hpp"
 #include "LAppDefine.hpp"
-#include "TouchManager.hpp"
 #include "LAppSprite.hpp"
 #include "LAppModel.hpp"
 
@@ -34,9 +33,6 @@ LAppView::LAppView()
 	_clearColor[2] = 1.0f;
 	_clearColor[3] = 0.0f;
 
-	// タッチ関係のイベント管理
-	_touchManager = new TouchManager();
-
 	// デバイス座標からスクリーン座標に変換するための
 	_deviceToScreen = new CubismMatrix44();
 
@@ -50,7 +46,6 @@ LAppView::~LAppView()
 	delete _renderSprite;
 	delete _viewMatrix;
 	delete _deviceToScreen;
-	delete _touchManager;
 	delete _back;
 	delete _gear;
 	delete _power;
@@ -178,22 +173,6 @@ void LAppView::InitializeSprite()
 	_renderSprite = new LAppSprite(x, y, static_cast<float>(width),
 				       static_cast<float>(height), 0,
 				       _programId);
-}
-
-void LAppView::OnTouchesBegan(float px, float py) const
-{
-	_touchManager->TouchesBegan(px, py);
-}
-
-void LAppView::OnTouchesMoved(float px, float py) const
-{
-	float viewX = this->TransformViewX(_touchManager->GetX());
-	float viewY = this->TransformViewY(_touchManager->GetY());
-
-	_touchManager->TouchesMoved(px, py);
-
-	LAppLive2DManager *Live2DManager = LAppLive2DManager::GetInstance();
-	Live2DManager->OnDrag(viewX, viewY);
 }
 
 float LAppView::TransformViewX(float deviceX) const
