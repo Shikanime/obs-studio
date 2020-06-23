@@ -19,8 +19,8 @@
 class LAppSprite {
 public:
 	/**
-    * @brief Rect 構造体。
-    */
+	 * @brief Rect 構造体。
+	 */
 	struct Rect {
 	public:
 		float left;  ///< 左辺
@@ -30,67 +30,67 @@ public:
 	};
 
 	/**
-    * @brief コンストラクタ
-    *
-    * @param[in]       x            x座標
-    * @param[in]       y            y座標
-    * @param[in]       width        横幅
-    * @param[in]       height       高さ
-    * @param[in]       textureId    テクスチャID
-    * @param[in]       programId    シェーダID
-    */
+	 * @brief コンストラクタ
+	 *
+	 * @param[in]       x            x座標
+	 * @param[in]       y            y座標
+	 * @param[in]       width        横幅
+	 * @param[in]       height       高さ
+	 * @param[in]       textureId    テクスチャID
+	 * @param[in]       programId    シェーダID
+	 */
 	LAppSprite(float x, float y, float width, float height,
 		   GLuint textureId, GLuint programId);
 
 	/**
-    * @brief デストラクタ
-    */
+	 * @brief デストラクタ
+	 */
 	~LAppSprite();
 
 	/**
-    * @brief Getter テクスチャID
-    * @return テクスチャIDを返す
-    */
+	 * @brief Getter テクスチャID
+	 * @return テクスチャIDを返す
+	 */
 	GLuint GetTextureId() { return _textureId; }
 
 	/**
-    * @brief 描画する
-    *
-    */
+	 * @brief 描画する
+	 *
+	 */
 	void Render() const;
 
 	/**
-    * @brief テクスチャIDを指定して描画する
-    *
-    */
+	 * @brief テクスチャIDを指定して描画する
+	 *
+	 */
 	void RenderImmidiate(GLuint textureId, const GLfloat uvVertex[8]) const;
 
 	/**
-    * @brief コンストラクタ
-    *
-    * @param[in]       pointX    x座標
-    * @param[in]       pointY    y座標
-    */
+	 * @brief コンストラクタ
+	 *
+	 * @param[in]       pointX    x座標
+	 * @param[in]       pointY    y座標
+	 */
 	bool IsHit(float pointX, float pointY) const;
 
 	/**
-     * @brief 色設定
-     *
-     * @param[in]       r (0.0~1.0)
-     * @param[in]       g (0.0~1.0)
-     * @param[in]       b (0.0~1.0)
-     * @param[in]       a (0.0~1.0)
-     */
+	* @brief 色設定
+	*
+	* @param[in]       r (0.0~1.0)
+	* @param[in]       g (0.0~1.0)
+	* @param[in]       b (0.0~1.0)
+	* @param[in]       a (0.0~1.0)
+	*/
 	void SetColor(float r, float g, float b, float a);
 
 	/**
-     * @brief サイズ再設定
-     *
-     * @param[in]       x            x座標
-     * @param[in]       y            y座標
-     * @param[in]       width        横幅
-     * @param[in]       height       高さ
-     */
+	* @brief サイズ再設定
+	*
+	* @param[in]       x            x座標
+	* @param[in]       y            y座標
+	* @param[in]       width        横幅
+	* @param[in]       height       高さ
+	*/
 	void ResetRect(float x, float y, float width, float height);
 
 private:

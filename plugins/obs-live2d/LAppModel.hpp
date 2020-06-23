@@ -21,50 +21,50 @@
 class LAppModel : public Csm::CubismUserModel {
 public:
 	/**
-     * @brief コンストラクタ
-     */
+	* @brief コンストラクタ
+	*/
 	LAppModel();
 
 	/**
-     * @brief デストラクタ
-     *
-     */
+	* @brief デストラクタ
+	*
+	*/
 	virtual ~LAppModel();
 
 	/**
-     * @brief model3.jsonが置かれたディレクトリとファイルパスからモデルを生成する
-     *
-     */
+	* @brief model3.jsonが置かれたディレクトリとファイルパスからモデルを生成する
+	*
+	*/
 	void LoadAssets(const Csm::csmChar *dir, const Csm::csmChar *fileName);
 
 	/**
-     * @brief レンダラを再構築する
-     *
-     */
+	* @brief レンダラを再構築する
+	*
+	*/
 	void ReloadRenderer();
 
 	/**
-     * @brief   モデルの更新処理。モデルのパラメータから描画状態を決定する。
-     *
-     */
+	* @brief   モデルの更新処理。モデルのパラメータから描画状態を決定する。
+	*
+	*/
 	void Update();
 
 	/**
-     * @brief   モデルを描画する処理。モデルを描画する空間のView-Projection行列を渡す。
-     *
-     * @param[in]  matrix  View-Projection行列
-     */
+	* @brief   モデルを描画する処理。モデルを描画する空間のView-Projection行列を渡す。
+	*
+	* @param[in]  matrix  View-Projection行列
+	*/
 	void Draw(Csm::CubismMatrix44 &matrix);
 
 	/**
-     * @brief   引数で指定したモーションの再生を開始する。
-     *
-     * @param[in]   group                       モーショングループ名
-     * @param[in]   no                          グループ内の番号
-     * @param[in]   priority                    優先度
-     * @param[in]   onFinishedMotionHandler     モーション再生終了時に呼び出されるコールバック関数。NULLの場合、呼び出されない。
-     * @return                                  開始したモーションの識別番号を返す。個別のモーションが終了したか否かを判定するIsFinished()の引数で使用する。開始できない時は「-1」
-     */
+	* @brief   引数で指定したモーションの再生を開始する。
+	*
+	* @param[in]   group                       モーショングループ名
+	* @param[in]   no                          グループ内の番号
+	* @param[in]   priority                    優先度
+	* @param[in]   onFinishedMotionHandler     モーション再生終了時に呼び出されるコールバック関数。NULLの場合、呼び出されない。
+	* @return                                  開始したモーションの識別番号を返す。個別のモーションが終了したか否かを判定するIsFinished()の引数で使用する。開始できない時は「-1」
+	*/
 	Csm::CubismMotionQueueEntryHandle
 	StartMotion(const Csm::csmChar *group, Csm::csmInt32 no,
 		    Csm::csmInt32 priority,
@@ -72,105 +72,105 @@ public:
 			    onFinishedMotionHandler = NULL);
 
 	/**
-     * @brief   ランダムに選ばれたモーションの再生を開始する。
-     *
-     * @param[in]   group                       モーショングループ名
-     * @param[in]   priority                    優先度
-     * @param[in]   onFinishedMotionHandler     モーション再生終了時に呼び出されるコールバック関数。NULLの場合、呼び出されない。
-     * @return                                  開始したモーションの識別番号を返す。個別のモーションが終了したか否かを判定するIsFinished()の引数で使用する。開始できない時は「-1」
-     */
+	* @brief   ランダムに選ばれたモーションの再生を開始する。
+	*
+	* @param[in]   group                       モーショングループ名
+	* @param[in]   priority                    優先度
+	* @param[in]   onFinishedMotionHandler     モーション再生終了時に呼び出されるコールバック関数。NULLの場合、呼び出されない。
+	* @return                                  開始したモーションの識別番号を返す。個別のモーションが終了したか否かを判定するIsFinished()の引数で使用する。開始できない時は「-1」
+	*/
 	Csm::CubismMotionQueueEntryHandle
 	StartRandomMotion(const Csm::csmChar *group, Csm::csmInt32 priority,
 			  Csm::ACubismMotion::FinishedMotionCallback
 				  onFinishedMotionHandler = NULL);
 
 	/**
-     * @brief   引数で指定した表情モーションをセットする
-     *
-     * @param   expressionID    表情モーションのID
-     */
+	* @brief   引数で指定した表情モーションをセットする
+	*
+	* @param   expressionID    表情モーションのID
+	*/
 	void SetExpression(const Csm::csmChar *expressionID);
 
 	/**
-     * @brief   ランダムに選ばれた表情モーションをセットする
-     *
-     */
+	* @brief   ランダムに選ばれた表情モーションをセットする
+	*
+	*/
 	void SetRandomExpression();
 
 	/**
-    * @brief   イベントの発火を受け取る
-    *
-    */
+	 * @brief   イベントの発火を受け取る
+	 *
+	 */
 	virtual void MotionEventFired(
 		const Live2D::Cubism::Framework::csmString &eventValue);
 
 	/**
-     * @brief    当たり判定テスト。<br>
-     *            指定IDの頂点リストから矩形を計算し、座標が矩形範囲内か判定する。
-     *
-     * @param[in]   hitAreaName     当たり判定をテストする対象のID
-     * @param[in]   x               判定を行うX座標
-     * @param[in]   y               判定を行うY座標
-     */
+	* @brief    当たり判定テスト。<br>
+	*            指定IDの頂点リストから矩形を計算し、座標が矩形範囲内か判定する。
+	*
+	* @param[in]   hitAreaName     当たり判定をテストする対象のID
+	* @param[in]   x               判定を行うX座標
+	* @param[in]   y               判定を行うY座標
+	*/
 	virtual Csm::csmBool HitTest(const Csm::csmChar *hitAreaName,
 				     Csm::csmFloat32 x, Csm::csmFloat32 y);
 
 	/**
-     * @brief   別ターゲットに描画する際に使用するバッファの取得
-     */
+	* @brief   別ターゲットに描画する際に使用するバッファの取得
+	*/
 	Csm::Rendering::CubismOffscreenFrame_OpenGLES2 &GetRenderBuffer();
 
 protected:
 	/**
-     *  @brief  モデルを描画する処理。モデルを描画する空間のView-Projection行列を渡す。
-     *
-     */
+	*  @brief  モデルを描画する処理。モデルを描画する空間のView-Projection行列を渡す。
+	*
+	*/
 	void DoDraw();
 
 private:
 	/**
-     * @brief model3.jsonからモデルを生成する。<br>
-     *         model3.jsonの記述に従ってモデル生成、モーション、物理演算などのコンポーネント生成を行う。
-     *
-     * @param[in]   setting     ICubismModelSettingのインスタンス
-     *
-     */
+	* @brief model3.jsonからモデルを生成する。<br>
+	*         model3.jsonの記述に従ってモデル生成、モーション、物理演算などのコンポーネント生成を行う。
+	*
+	* @param[in]   setting     ICubismModelSettingのインスタンス
+	*
+	*/
 	void SetupModel(Csm::ICubismModelSetting *setting);
 
 	/**
-     * @brief OpenGLのテクスチャユニットにテクスチャをロードする
-     *
-     */
+	* @brief OpenGLのテクスチャユニットにテクスチャをロードする
+	*
+	*/
 	void SetupTextures();
 
 	/**
-     * @brief   モーションデータをグループ名から一括でロードする。<br>
-     *           モーションデータの名前は内部でModelSettingから取得する。
-     *
-     * @param[in]   group  モーションデータのグループ名
-     */
+	* @brief   モーションデータをグループ名から一括でロードする。<br>
+	*           モーションデータの名前は内部でModelSettingから取得する。
+	*
+	* @param[in]   group  モーションデータのグループ名
+	*/
 	void PreloadMotionGroup(const Csm::csmChar *group);
 
 	/**
-     * @brief   モーションデータをグループ名から一括で解放する。<br>
-     *           モーションデータの名前は内部でModelSettingから取得する。
-     *
-     * @param[in]   group  モーションデータのグループ名
-     */
+	* @brief   モーションデータをグループ名から一括で解放する。<br>
+	*           モーションデータの名前は内部でModelSettingから取得する。
+	*
+	* @param[in]   group  モーションデータのグループ名
+	*/
 	void ReleaseMotionGroup(const Csm::csmChar *group) const;
 
 	/**
-    * @brief すべてのモーションデータの解放
-    *
-    * すべてのモーションデータを解放する。
-    */
+	 * @brief すべてのモーションデータの解放
+	 *
+	 * すべてのモーションデータを解放する。
+	 */
 	void ReleaseMotions();
 
 	/**
-    * @brief すべての表情データの解放
-    *
-    * すべての表情データを解放する。
-    */
+	 * @brief すべての表情データの解放
+	 *
+	 * すべての表情データを解放する。
+	 */
 	void ReleaseExpressions();
 
 	Csm::ICubismModelSetting *_modelSetting; ///< モデルセッティング情報

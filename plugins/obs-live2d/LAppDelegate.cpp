@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Copyright(c) Live2D Inc. All rights reserved.
  *
  * Use of this source code is governed by the Live2D Open Software license
@@ -11,6 +11,8 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <util/base.h>
+#include <graphics/graphics.h>
+#include <obs.h>
 #include "LAppView.hpp"
 #include "LAppPal.hpp"
 #include "LAppDefine.hpp"
@@ -43,68 +45,21 @@ void LAppDelegate::ReleaseInstance()
 	s_instance = NULL;
 }
 
-bool LAppDelegate::Initialize()
+void LAppDelegate::Initialize()
 {
-	// GLFWの初期化
-	if (glfwInit() == GL_FALSE) {
-		bcrash("Can't initialize GLFW");
-		return GL_FALSE;
-	}
-
-	// Windowの生成_
-	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
-	_window = glfwCreateWindow(RenderTargetWidth, RenderTargetHeight,
-				   "SAMPLE", NULL, NULL);
-	if (_window == NULL) {
-		bcrash("Can't create GLFW window");
-		glfwTerminate();
-		return GL_FALSE;
-	}
-
-	// Windowのコンテキストをカレントに設定
-	glfwMakeContextCurrent(_window);
-	glfwSwapInterval(1);
-
-	if (glewInit() != GLEW_OK) {
-		bcrash("Can't initialize GLEW");
-		glfwTerminate();
-		return GL_FALSE;
-	}
-
-	//テクスチャサンプリング設定
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-	//透過設定
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	//コールバック関数の登録
-	glfwSetMouseButtonCallback(_window, EventHandler::OnMouseCallBack);
-	glfwSetCursorPosCallback(_window, EventHandler::OnMouseCallBack);
-
-	// ウィンドウサイズ記憶
-	int width, height;
-	glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &width,
-			  &height);
-	_windowWidth = width;
-	_windowHeight = height;
-
-	//AppViewの初期化
-	_view->Initialize();
-
 	// Cubism SDK の初期化
-	InitializeCubism();
+	_cubismOption.LogFunction = LAppPal::PrintMessage;
+	_cubismOption.LoggingLevel = LAppDefine::CubismLoggingLevel;
+	CubismFramework::StartUp(&_cubismAllocator, &_cubismOption);
 
-	return GL_TRUE;
+	//Initialize cubism
+	CubismFramework::Initialize();
 }
 
 void LAppDelegate::Release()
 {
 	// Windowの削除
 	glfwDestroyWindow(_window);
-
-	glfwTerminate();
 
 	delete _textureManager;
 	delete _view;
@@ -118,6 +73,57 @@ void LAppDelegate::Release()
 
 void LAppDelegate::Render()
 {
+	if (_isInit) {
+		// Windowの生成_
+		// glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
+		_window = glfwCreateWindow(RenderTargetWidth,
+					   RenderTargetHeight,
+					   "Live2D Model Scene", NULL, NULL);
+		if (_window == NULL) {
+			bcrash("Can't create GLFW window");
+			glfwTerminate();
+			return;
+		}
+
+		// Windowのコンテキストをカレントに設定
+		glfwMakeContextCurrent(_window);
+		glfwSwapInterval(1);
+
+		if (glewInit() != GLEW_OK) {
+			bcrash("Can't initialize GLEW");
+			glfwTerminate();
+			return;
+		}
+
+		//テクスチャサンプリング設定
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+				GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+				GL_LINEAR);
+
+		//透過設定
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		//コールバック関数の登録
+		glfwSetMouseButtonCallback(_window,
+					   EventHandler::OnMouseCallBack);
+		glfwSetCursorPosCallback(_window,
+					 EventHandler::OnMouseCallBack);
+
+		//load model
+		LAppLive2DManager::GetInstance();
+
+		//default proj
+		CubismMatrix44 projection;
+
+		LAppPal::UpdateTime();
+
+		_view->InitializeSprite();
+
+		_isInit = false;
+	}
+
 	int width, height;
 	glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &width,
 			  &height);
@@ -143,14 +149,22 @@ void LAppDelegate::Render()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearDepth(1.0);
 
-	//描画更新
-	_view->Render();
+	// Draw graphic texture
+	gs_texture_t *texture =
+		gs_texture_create(width, height, GS_RGBA, 1, NULL, GS_DYNAMIC);
+
+	uint8_t *ptr;
+	uint32_t linesize;
+	if (gs_texture_map(texture, &ptr, &linesize)) {
+		//描画更新
+		_view->Render();
+	}
+	gs_texture_unmap(texture);
+	obs_source_draw(texture, 0, 0, 0, 0, true);
+	gs_texture_destroy(texture);
 
 	// バッファの入れ替え
 	glfwSwapBuffers(_window);
-
-	// Poll for and process events
-	glfwPollEvents();
 }
 
 LAppDelegate::LAppDelegate()
@@ -159,7 +173,7 @@ LAppDelegate::LAppDelegate()
 	  _captured(false),
 	  _mouseX(0.0f),
 	  _mouseY(0.0f),
-	  _isEnd(false),
+	  _isInit(true),
 	  _windowWidth(0),
 	  _windowHeight(0)
 {
@@ -168,27 +182,6 @@ LAppDelegate::LAppDelegate()
 }
 
 LAppDelegate::~LAppDelegate() {}
-
-void LAppDelegate::InitializeCubism()
-{
-	//setup cubism
-	_cubismOption.LogFunction = LAppPal::PrintMessage;
-	_cubismOption.LoggingLevel = LAppDefine::CubismLoggingLevel;
-	Csm::CubismFramework::StartUp(&_cubismAllocator, &_cubismOption);
-
-	//Initialize cubism
-	CubismFramework::Initialize();
-
-	//load model
-	LAppLive2DManager::GetInstance();
-
-	//default proj
-	CubismMatrix44 projection;
-
-	LAppPal::UpdateTime();
-
-	_view->InitializeSprite();
-}
 
 void LAppDelegate::OnMouseCallBack(GLFWwindow *window, int button, int action,
 				   int modify)
@@ -203,11 +196,6 @@ void LAppDelegate::OnMouseCallBack(GLFWwindow *window, int button, int action,
 	if (GLFW_PRESS == action) {
 		_captured = true;
 		_view->OnTouchesBegan(_mouseX, _mouseY);
-	} else if (GLFW_RELEASE == action) {
-		if (_captured) {
-			_captured = false;
-			_view->OnTouchesEnded(_mouseX, _mouseY);
-		}
 	}
 }
 

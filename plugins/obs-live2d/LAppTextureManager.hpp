@@ -20,8 +20,8 @@
 class LAppTextureManager {
 public:
 	/**
-    * @brief 画像情報構造体
-    */
+	 * @brief 画像情報構造体
+	 */
 	struct TextureInfo {
 		GLuint id;            ///< テクスチャID
 		int width;            ///< 横幅
@@ -30,26 +30,26 @@ public:
 	};
 
 	/**
-    * @brief コンストラクタ
-    */
+	 * @brief コンストラクタ
+	 */
 	LAppTextureManager();
 
 	/**
-    * @brief デストラクタ
-    *
-    */
+	 * @brief デストラクタ
+	 *
+	 */
 	~LAppTextureManager();
 
 	/**
-    * @brief プリマルチプライ処理
-    *
-    * @param[in] red  画像のRed値
-    * @param[in] green  画像のGreen値
-    * @param[in] blue  画像のBlue値
-    * @param[in] alpha  画像のAlpha値
-    *
-    * @return プリマルチプライ処理後のカラー値
-    */
+	 * @brief プリマルチプライ処理
+	 *
+	 * @param[in] red  画像のRed値
+	 * @param[in] green  画像のGreen値
+	 * @param[in] blue  画像のBlue値
+	 * @param[in] alpha  画像のAlpha値
+	 *
+	 * @return プリマルチプライ処理後のカラー値
+	 */
 	inline unsigned int Premultiply(unsigned char red, unsigned char green,
 					unsigned char blue, unsigned char alpha)
 	{
@@ -60,42 +60,42 @@ public:
 	}
 
 	/**
-    * @brief 画像読み込み
-    *
-    * @param[in] fileName  読み込む画像ファイルパス名
-    * @return 画像情報。読み込み失敗時はNULLを返す
-    */
+	 * @brief 画像読み込み
+	 *
+	 * @param[in] fileName  読み込む画像ファイルパス名
+	 * @return 画像情報。読み込み失敗時はNULLを返す
+	 */
 	TextureInfo *CreateTextureFromPngFile(std::string fileName);
 
 	/**
-    * @brief 画像の解放
-    *
-    * 配列に存在する画像全てを解放する
-    */
+	 * @brief 画像の解放
+	 *
+	 * 配列に存在する画像全てを解放する
+	 */
 	void ReleaseTextures();
 
 	/**
-     * @brief 画像の解放
-     *
-     * 指定したテクスチャIDの画像を解放する
-     * @param[in] textureId  解放するテクスチャID
-     **/
+	* @brief 画像の解放
+	*
+	* 指定したテクスチャIDの画像を解放する
+	* @param[in] textureId  解放するテクスチャID
+	**/
 	void ReleaseTexture(Csm::csmUint32 textureId);
 
 	/**
-    * @brief 画像の解放
-    *
-    * 指定した名前の画像を解放する
-    * @param[in] fileName  解放する画像ファイルパス名
-    **/
+	 * @brief 画像の解放
+	 *
+	 * 指定した名前の画像を解放する
+	 * @param[in] fileName  解放する画像ファイルパス名
+	 **/
 	void ReleaseTexture(std::string fileName);
 
 	/**
-     * @brief テクスチャIDからテクスチャ情報を得る
-     *
-     * @param   textureId[in]       取得したいテクスチャID
-     * @return  テクスチャが存在していればTextureInfoが返る
-     */
+	* @brief テクスチャIDからテクスチャ情報を得る
+	*
+	* @param   textureId[in]       取得したいテクスチャID
+	* @return  テクスチャが存在していればTextureInfoが返る
+	*/
 	TextureInfo *GetTextureInfoById(GLuint textureId) const;
 
 private:

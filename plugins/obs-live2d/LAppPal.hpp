@@ -19,55 +19,55 @@
 class LAppPal {
 public:
 	/**
-    * @brief ファイルをバイトデータとして読み込む
-    *
-    * ファイルをバイトデータとして読み込む
-    *
-    * @param[in]   filePath    読み込み対象ファイルのパス
-    * @param[out]  outSize     ファイルサイズ
-    * @return                  バイトデータ
-    */
+	 * @brief ファイルをバイトデータとして読み込む
+	 *
+	 * ファイルをバイトデータとして読み込む
+	 *
+	 * @param[in]   filePath    読み込み対象ファイルのパス
+	 * @param[out]  outSize     ファイルサイズ
+	 * @return                  バイトデータ
+	 */
 	static Csm::csmByte *LoadFileAsBytes(const std::string filePath,
 					     Csm::csmSizeInt *outSize);
 
 	/**
-    * @brief バイトデータを解放する
-    *
-    * バイトデータを解放する
-    *
-    * @param[in]   byteData    解放したいバイトデータ
-    */
+	 * @brief バイトデータを解放する
+	 *
+	 * バイトデータを解放する
+	 *
+	 * @param[in]   byteData    解放したいバイトデータ
+	 */
 	static void ReleaseBytes(Csm::csmByte *byteData);
 
 	/**
-    * @biref   デルタ時間（前回フレームとの差分）を取得する
-    *
-    * @return  デルタ時間[ms]
-    *
-    */
+	 * @biref   デルタ時間（前回フレームとの差分）を取得する
+	 *
+	 * @return  デルタ時間[ms]
+	 *
+	 */
 	static Csm::csmFloat32 GetDeltaTime();
 
 	static void UpdateTime();
 
 	/**
-    * @brief ログを出力する
-    *
-    * ログを出力する
-    *
-    * @param[in]   format  書式付文字列
-    * @param[in]   ...     (可変長引数)文字列
-    *
-    */
+	 * @brief ログを出力する
+	 *
+	 * ログを出力する
+	 *
+	 * @param[in]   format  書式付文字列
+	 * @param[in]   ...     (可変長引数)文字列
+	 *
+	 */
 	static void PrintLog(const Csm::csmChar *format, ...);
 
 	/**
-    * @brief メッセージを出力する
-    *
-    * メッセージを出力する
-    *
-    * @param[in]   message  文字列
-    *
-    */
+	 * @brief メッセージを出力する
+	 *
+	 * メッセージを出力する
+	 *
+	 * @param[in]   message  文字列
+	 *
+	 */
 	static void PrintMessage(const Csm::csmChar *message);
 
 private:

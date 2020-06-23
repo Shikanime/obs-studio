@@ -27,17 +27,19 @@ static const char *live2d_getname([[maybe_unused]] void *type_data)
 static void *live2d_create([[maybe_unused]] obs_data_t *settings,
 			   [[maybe_unused]] obs_source_t *source)
 {
+	LAppDelegate::GetInstance()->Initialize();
 	return malloc(sizeof(obs_live2d_data));
 }
 
 void live2d_destroy([[maybe_unused]] void *data)
 {
+	LAppDelegate::GetInstance()->Release();
 	delete reinterpret_cast<obs_live2d_data *>(data);
 }
 
 void live2d_video_render(void *data, gs_effect_t *effect)
 {
-	// LAppDelegate::GetInstance()->Render();
+	LAppDelegate::GetInstance()->Render();
 }
 
 static uint32_t live2d_get_width([[maybe_unused]] void *data)
@@ -61,8 +63,9 @@ void live2d_update(void *data, obs_data_t *settings) {}
 
 bool obs_module_load()
 {
-	// create the application instance
-	if (LAppDelegate::GetInstance()->Initialize() == GL_FALSE) {
+	// GLFWの初期化
+	if (glfwInit() == GL_FALSE) {
+		bcrash("Can't initialize GLFW");
 		return false;
 	}
 
@@ -87,6 +90,7 @@ bool obs_module_load()
 
 void obs_module_unload()
 {
-	LAppDelegate::GetInstance()->Release();
+	glfwTerminate();
+
 	LAppDelegate::ReleaseInstance();
 }

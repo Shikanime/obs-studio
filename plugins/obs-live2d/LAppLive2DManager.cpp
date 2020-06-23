@@ -157,10 +157,10 @@ void LAppLive2DManager::ChangeScene(Csm::csmInt32 index)
 	_models[0]->LoadAssets(modelPath.c_str(), modelJsonName.c_str());
 
 	/*
-     * モデル半透明表示を行うサンプルを提示する。
-     * ここでUSE_RENDER_TARGET、USE_MODEL_RENDER_TARGETが定義されている場合
-     * 別のレンダリングターゲットにモデルを描画し、描画結果をテクスチャとして別のスプライトに張り付ける。
-     */
+	* モデル半透明表示を行うサンプルを提示する。
+	* ここでUSE_RENDER_TARGET、USE_MODEL_RENDER_TARGETが定義されている場合
+	* 別のレンダリングターゲットにモデルを描画し、描画結果をテクスチャとして別のスプライトに張り付ける。
+	*/
 	{
 #if defined(USE_RENDER_TARGET)
 		// LAppViewの持つターゲットに描画を行う場合、こちらを選択

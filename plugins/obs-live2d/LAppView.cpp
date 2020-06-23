@@ -196,33 +196,6 @@ void LAppView::OnTouchesMoved(float px, float py) const
 	Live2DManager->OnDrag(viewX, viewY);
 }
 
-void LAppView::OnTouchesEnded(float px, float py) const
-{
-	// タッチ終了
-	LAppLive2DManager *live2DManager = LAppLive2DManager::GetInstance();
-	live2DManager->OnDrag(0.0f, 0.0f);
-	{
-
-		// シングルタップ
-		float x = _deviceToScreen->TransformX(
-			_touchManager->GetX()); // 論理座標変換した座標を取得。
-		float y = _deviceToScreen->TransformY(
-			_touchManager->GetY()); // 論理座標変換した座標を取得。
-		blog(LOG_DEBUG, "TouchesEnded x:%.2f y:%.2f", x, y);
-		live2DManager->OnTap(x, y);
-
-		// 歯車にタップしたか
-		if (_gear->IsHit(px, py)) {
-			live2DManager->NextScene();
-		}
-
-		// 電源ボタンにタップしたか
-		if (_power->IsHit(px, py)) {
-			LAppDelegate::GetInstance()->AppEnd();
-		}
-	}
-}
-
 float LAppView::TransformViewX(float deviceX) const
 {
 	float screenX = _deviceToScreen->TransformX(
