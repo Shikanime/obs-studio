@@ -107,8 +107,6 @@ void LAppDelegate::Render()
 	    height > 0) {
 		//AppViewの初期化
 		_view->Initialize();
-		// スプライトサイズを再設定
-		_view->ResizeSprite();
 		// サイズを保存しておく
 		_windowWidth = width;
 		_windowHeight = height;

@@ -57,11 +57,6 @@ public:
 	void InitializeSprite();
 
 	/**
-	 * @brief スプライト系のサイズ再設定
-	 */
-	void ResizeSprite();
-
-	/**
 	 * @brief X座標をView座標に変換する。
 	 *
 	 * @param[in]       deviceX            デバイスX座標
@@ -122,9 +117,6 @@ private:
 	Csm::CubismMatrix44 *_deviceToScreen; ///< デバイスからスクリーンへの行列
 	Csm::CubismViewMatrix *_viewMatrix; ///< viewMatrix
 	GLuint _programId;                  ///< シェーダID
-	LAppSprite *_back;                  ///< 背景画像
-	LAppSprite *_gear;                  ///< ギア画像
-	LAppSprite *_power;                 ///< 電源画像
 
 	// レンダリング先を別ターゲットにする方式の場合に使用
 	LAppSprite *
