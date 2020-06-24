@@ -74,7 +74,7 @@ bool obs_module_load()
 {
 	// GLFWの初期化
 	if (glfwInit() == GL_FALSE) {
-		bcrash("Can't initialize GLFW");
+		blog(LOG_ERROR, "Can't initialize GLFW");
 		return false;
 	}
 
@@ -82,7 +82,7 @@ bool obs_module_load()
 	cubismOption.LogFunction = LAppPal::PrintMessage;
 	cubismOption.LoggingLevel = LAppDefine::CubismLoggingLevel;
 	if (!CubismFramework::StartUp(&cubismAllocator, &cubismOption)) {
-		bcrash("Can't start Cubism Framework");
+		blog(LOG_ERROR, "Can't start Cubism Framework");
 		return false;
 	}
 

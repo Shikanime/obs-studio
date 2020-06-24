@@ -63,7 +63,7 @@ void LAppDelegate::Render()
 					   RenderTargetHeight,
 					   "Live2D Model Scene", NULL, NULL);
 		if (_window == NULL) {
-			bcrash("Can't create GLFW window");
+			blog(LOG_ERROR, "Can't create GLFW window");
 			glfwTerminate();
 			return;
 		}
@@ -72,7 +72,7 @@ void LAppDelegate::Render()
 		glfwMakeContextCurrent(_window);
 
 		if (glewInit() != GLEW_OK) {
-			bcrash("Can't initialize GLEW");
+			blog(LOG_ERROR, "Can't initialize GLEW");
 			glfwTerminate();
 			return;
 		}
