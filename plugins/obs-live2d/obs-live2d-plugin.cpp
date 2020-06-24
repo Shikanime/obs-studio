@@ -24,18 +24,17 @@ MODULE_EXPORT const char *obs_module_description(void)
 struct obs_live2d_data {
 };
 
-static const char *live2d_getname([[maybe_unused]] void *type_data)
+static const char *live2d_getname(void *)
 {
 	return obs_module_text("Live2DModel");
 }
 
-static void *live2d_create([[maybe_unused]] obs_data_t *settings,
-			   [[maybe_unused]] obs_source_t *source)
+static void *live2d_create(obs_data_t *, obs_source_t *)
 {
 	return malloc(sizeof(obs_live2d_data));
 }
 
-void live2d_destroy([[maybe_unused]] void *data)
+void live2d_destroy(void *data)
 {
 	LAppDelegate::GetInstance()->Release();
 	delete reinterpret_cast<obs_live2d_data *>(data);
@@ -46,19 +45,19 @@ void live2d_video_render(void *data, gs_effect_t *effect)
 	LAppDelegate::GetInstance()->Render();
 }
 
-static uint32_t live2d_get_width([[maybe_unused]] void *data)
+static uint32_t live2d_get_width(void *data)
 {
-	return 1920;
+	return LAppDelegate::GetInstance()->GetWindowWidth();
 }
 
-static uint32_t live2d_get_height([[maybe_unused]] void *data)
+static uint32_t live2d_get_height(void *)
 {
-	return 1080;
+	return LAppDelegate::GetInstance()->GetWindowHeight();
 }
 
-static void live2d_get_defaults([[maybe_unused]] obs_data_t *settings) {}
+static void live2d_get_defaults(obs_data_t *) {}
 
-obs_properties_t *live2d_get_properties([[maybe_unused]] void *data)
+obs_properties_t *live2d_get_properties(void *)
 {
 	return obs_properties_create();
 }

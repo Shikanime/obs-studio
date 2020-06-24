@@ -84,6 +84,9 @@ public:
 	 */
 	LAppView *GetView() { return _view; }
 
+	int GetWindowWidth() { return _windowWidth; }
+	int GetWindowHeight() { return _windowHeight; }
+
 	LAppTextureManager *GetTextureManager() { return _textureManager; }
 
 private:
