@@ -46,7 +46,7 @@ LAppModel::LAppModel()
 	  _userTimeSeconds(0.0f),
 	  _deleteModel(false)
 {
-#ifdef DEBUG_MODEL
+#ifdef MODEL_DEBUG
 	_debugMode = true;
 #endif
 

@@ -54,10 +54,6 @@ const csmInt32 PriorityIdle = 1;
 const csmInt32 PriorityNormal = 2;
 const csmInt32 PriorityForce = 3;
 
-// Frameworkから出力するログのレベル設定
-const CubismFramework::Option::LogLevel CubismLoggingLevel =
-	CubismFramework::Option::LogLevel_Verbose;
-
 // デフォルトのレンダーターゲットサイズ
 const csmInt32 RenderTargetWidth = 1900;
 const csmInt32 RenderTargetHeight = 1000;

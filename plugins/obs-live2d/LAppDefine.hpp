@@ -36,7 +36,8 @@ extern const csmChar *GearImageName;  ///< 歯車画像ファイル
 extern const csmChar *PowerImageName; ///< 終了ボタン画像ファイル
 
 // モデル定義--------------------------------------------
-extern const csmChar *ModelDir []; ///< モデルを配置したディレクトリ名の配列. ディレクトリ名とmodel3.jsonの名前を一致させておく.
+extern const csmChar *ModelDir
+	[]; ///< モデルを配置したディレクトリ名の配列. ディレクトリ名とmodel3.jsonの名前を一致させておく.
 extern const csmInt32 ModelDirSize; ///< モデルディレクトリ配列のサイズ
 
 // 外部定義ファイル(json)と合わせる
@@ -54,9 +55,6 @@ extern const csmInt32 PriorityNone;   ///< モーションの優先度定数: 0
 extern const csmInt32 PriorityIdle;   ///< モーションの優先度定数: 1
 extern const csmInt32 PriorityNormal; ///< モーションの優先度定数: 2
 extern const csmInt32 PriorityForce;  ///< モーションの優先度定数: 3
-
-// Frameworkから出力するログのレベル設定
-extern const CubismFramework::Option::LogLevel CubismLoggingLevel;
 
 // デフォルトのレンダーターゲットサイズ
 extern const csmInt32 RenderTargetWidth;

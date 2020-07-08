@@ -7,6 +7,7 @@
 
 #include "LAppDelegate.hpp"
 
+#include <obs-module.h>
 #include <Rendering/D3D11/CubismRenderer_D3D11.hpp>
 
 #include "LAppLive2DManager.hpp"
@@ -80,7 +81,7 @@ bool LAppDelegate::Initialize()
 				     rect.bottom, NULL, NULL,
 				     _windowClass.hInstance, NULL);
 	if (_windowHandle == NULL) {
-		LAppPal::PrintLog("Fail Create Window");
+		blog(LOG_ERROR, "can't create Window");
 		return false;
 	}
 
@@ -118,7 +119,7 @@ bool LAppDelegate::Initialize()
 		D3D11_SDK_VERSION, &_presentParameters, &_swapChain, &_device,
 		&level, &_deviceContext);
 	if (FAILED(result)) {
-		LAppPal::PrintLog("Fail Direct3D Create Device 0x%x", result);
+		blog(LOG_ERROR, "fail Direct3D Create Device 0x%x", result);
 		return false;
 	}
 
@@ -135,7 +136,7 @@ bool LAppDelegate::Initialize()
 	depthDesc.StencilEnable = false;
 	result = _device->CreateDepthStencilState(&depthDesc, &_depthState);
 	if (FAILED(result)) {
-		LAppPal::PrintLog("Fail Create Depth 0x%x", result);
+		blog(LOG_ERROR, "can't create Depth 0x%x", result);
 		return false;
 	}
 
@@ -151,7 +152,7 @@ bool LAppDelegate::Initialize()
 	rasterDesc.SlopeScaledDepthBias = 0;
 	result = _device->CreateRasterizerState(&rasterDesc, &_rasterizer);
 	if (FAILED(result)) {
-		LAppPal::PrintLog("Fail Create Rasterizer 0x%x", result);
+		blog(LOG_ERROR, "can't create Rasterizer 0x%x", result);
 		return false;
 	}
 
@@ -168,7 +169,7 @@ bool LAppDelegate::Initialize()
 	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 	_device->CreateSamplerState(&samplerDesc, &_samplerState);
 	if (FAILED(result)) {
-		LAppPal::PrintLog("Fail Create Sampler 0x%x", result);
+		blog(LOG_ERROR, "can't create Sampler 0x%x", result);
 		return false;
 	}
 
@@ -199,7 +200,7 @@ bool LAppDelegate::CreateRenderTarget(UINT width, UINT height)
 	hr = _swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D),
 				   (LPVOID *)&backBuffer);
 	if (FAILED(hr)) {
-		LAppPal::PrintLog("Fail SwapChain GetBuffer 0x%x", hr);
+		blog(LOG_ERROR, "can't SwapChain GetBuffer 0x%x", hr);
 		return false;
 	}
 	hr = _device->CreateRenderTargetView(backBuffer, NULL,
@@ -207,7 +208,7 @@ bool LAppDelegate::CreateRenderTarget(UINT width, UINT height)
 	// Getした分はRelease
 	backBuffer->Release();
 	if (FAILED(hr)) {
-		LAppPal::PrintLog("Fail CreateRenderTargetView 0x%x", hr);
+		blog(LOG_ERROR, "can't create RenderTargetView 0x%x", hr);
 		return false;
 	}
 
@@ -227,7 +228,7 @@ bool LAppDelegate::CreateRenderTarget(UINT width, UINT height)
 	depthDesc.MiscFlags = 0;
 	hr = _device->CreateTexture2D(&depthDesc, NULL, &_depthTexture);
 	if (FAILED(hr)) {
-		LAppPal::PrintLog("Fail Create DepthTarget 0x%x", hr);
+		blog(LOG_ERROR, "can't create DepthTarget 0x%x", hr);
 		return false;
 	}
 	// DepthView
@@ -239,7 +240,7 @@ bool LAppDelegate::CreateRenderTarget(UINT width, UINT height)
 	hr = _device->CreateDepthStencilView(_depthTexture, &depthViewDesc,
 					     &_depthStencilView);
 	if (FAILED(hr)) {
-		LAppPal::PrintLog("Fail Create DepthTargetView 0x%x", hr);
+		blog(LOG_ERROR, "can't create DepthTargetView 0x%x", hr);
 		return false;
 	}
 
@@ -448,14 +449,14 @@ bool LAppDelegate::CreateShader()
 			&vertexBlob,
 			&vertexError); // エラーが出る場合はここで
 		if (FAILED(hr)) {
-			LAppPal::PrintLog("Fail Compile Vertex Shader");
+			blog(LOG_ERROR, "can't compile Vertex Shader");
 			break;
 		}
 		hr = _device->CreateVertexShader(vertexBlob->GetBufferPointer(),
 						 vertexBlob->GetBufferSize(),
 						 NULL, &_vertexShader);
 		if (FAILED(hr)) {
-			LAppPal::PrintLog("Fail Create Vertex Shader");
+			blog(LOG_ERROR, "can't create Vertex Shader");
 			break;
 		}
 
@@ -472,7 +473,7 @@ bool LAppDelegate::CreateShader()
 			&pixelBlob,
 			&pixelError); // エラーが出る場合はここで
 		if (FAILED(hr)) {
-			LAppPal::PrintLog("Fail Compile Pixel Shader");
+			blog(LOG_ERROR, "can't compile Pixel Shader");
 			break;
 		}
 
@@ -480,7 +481,7 @@ bool LAppDelegate::CreateShader()
 						pixelBlob->GetBufferSize(),
 						NULL, &_pixelShader);
 		if (FAILED(hr)) {
-			LAppPal::PrintLog("Fail Create Pixel Shader");
+			blog(LOG_ERROR, "can't create Pixel Shader");
 			break;
 		}
 
@@ -498,7 +499,8 @@ bool LAppDelegate::CreateShader()
 						&_vertexFormat);
 
 		if (FAILED(hr)) {
-			LAppPal::PrintLog("CreateVertexDeclaration failed");
+			blog(LOG_ERROR,
+			     "can't create VertexDeclaration failed");
 			break;
 		}
 
@@ -645,7 +647,7 @@ void LAppDelegate::EndFrame()
 	}
 
 	if (_deviceStep == DeviceStep_Lost) { // ロストした
-		LAppPal::PrintLog("Device Lost Abort");
+		blog(LOG_ERROR, "device losted");
 		// アプリケーション終了
 		AppEnd();
 	}

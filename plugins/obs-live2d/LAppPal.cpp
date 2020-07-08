@@ -83,33 +83,6 @@ void LAppPal::UpdateTime()
 	s_lastFrame = current;
 }
 
-void LAppPal::PrintLog(const char *format, ...)
-{
-	va_list args;
-	char buf[256];
-	va_start(args, format);
-	_vsnprintf_s(buf, sizeof(buf), format, args);
-	OutputDebugStringA((LPCSTR)buf);
-	OutputDebugStringA("\n"); // 改行を別途付与します
-	va_end(args);
-}
-
-void LAppPal::PrintLogW(const wchar_t *format, ...)
-{
-	va_list args;
-	wchar_t buf[256];
-	va_start(args, format);
-	_vsnwprintf_s(buf, sizeof(buf), format, args);
-	OutputDebugString((LPCWSTR)buf);
-	OutputDebugString((LPCWSTR)"\n"); // 改行を別途付与します
-	va_end(args);
-}
-
-void LAppPal::PrintMessage(const csmChar *message)
-{
-	PrintLog("%s", message);
-}
-
 void LAppPal::CoordinateFullScreenToWindow(float clientWidth,
 					   float clientHeight,
 					   float fullScreenX, float fullScreenY,

@@ -39,9 +39,7 @@ void live2d_destroy(void *data)
 	delete reinterpret_cast<obs_live2d_data *>(data);
 }
 
-void live2d_video_render(void *data, gs_effect_t *effect)
-{
-}
+void live2d_video_render(void *data, gs_effect_t *effect) {}
 
 static uint32_t live2d_get_width(void *data)
 {
@@ -71,8 +69,17 @@ struct obs_source_info s_sourceInfo;
 bool obs_module_load()
 {
 	// Cubism SDK の初期化
-	s_cubismOption.LogFunction = LAppPal::PrintMessage;
-	s_cubismOption.LoggingLevel = LAppDefine::CubismLoggingLevel;
+#ifdef _DEBUG
+	s_cubismOption.LogFunction = [](const csmChar *message) {
+		blog(LOG_DEBUG, "%s", message);
+	};
+	s_cubismOption.LoggingLevel = CubismFramework::Option::LogLevel_Verbose;
+#else
+	s_cubismOption.LogFunction = [](const csmChar *message) {
+		blog(LOG_INFO, "%s", message);
+	};
+	s_cubismOption.LoggingLevel = CubismFramework::Option::LogLevel_Info;
+#endif
 	if (!CubismFramework::StartUp(&s_cubismAllocator, &s_cubismOption)) {
 		blog(LOG_ERROR, "can't start Cubism Framework");
 		return false;

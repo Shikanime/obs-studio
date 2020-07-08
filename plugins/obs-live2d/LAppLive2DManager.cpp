@@ -24,7 +24,7 @@ LAppLive2DManager *s_instance = NULL;
 
 void FinishedMotion(ACubismMotion *self)
 {
-	LAppPal::PrintLog("Motion Finished: %x", self);
+	blog(LOG_DEBUG, "Motion Finished: %x", self);
 }
 }
 
