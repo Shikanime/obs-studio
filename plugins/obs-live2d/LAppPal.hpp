@@ -7,8 +7,15 @@
 
 #pragma once
 
-#include <CubismFramework.hpp>
+#include <Windows.h>
 #include <string>
+#include <CubismFramework.hpp>
+#include <Type/CubismBasicType.hpp>
+
+//========================================================
+//  名前空間のエイリアス
+//========================================================
+namespace Csm = Live2D::Cubism::Framework;
 
 /**
 * @brief プラットフォーム依存機能を抽象化する Cubism Platform Abstraction Layer.
@@ -18,6 +25,11 @@
 */
 class LAppPal {
 public:
+	/**
+ 	 * @brief タイマーをスタート
+ 	 */
+	static void StartTimer();
+
 	/**
 	 * @brief ファイルをバイトデータとして読み込む
 	 *
@@ -58,7 +70,18 @@ public:
 	 * @param[in]   ...     (可変長引数)文字列
 	 *
 	 */
-	static void PrintLog(const Csm::csmChar *format, ...);
+	static void PrintLog(const char *, ...);
+
+	/**
+	 * @brief ログを出力する wchar版
+	 *
+	 * ログを出力する
+	 *
+	 * @param[in]   format  書式付文字列
+	 * @param[in]   ...     (可変長引数)文字列
+	 *
+	 */
+	static void PrintLogW(const wchar_t *, ...);
 
 	/**
 	 * @brief メッセージを出力する
@@ -70,8 +93,28 @@ public:
 	 */
 	static void PrintMessage(const Csm::csmChar *message);
 
-private:
-	static double s_currentFrame;
-	static double s_lastFrame;
-	static double s_deltaTime;
+	/**
+ 	 * @brief   座標変換
+ 	 *          フルスクリーン LT(-bufferX, bufferY) RB(bufferX, -bufferY) → ウィンドウ・マウス LT(0, 0) RB(bufferX, bufferY)
+ 	 */
+	static void
+	CoordinateFullScreenToWindow(float clientWidth, float clientHeight,
+				     float fullScreenX, float fullScreenY,
+				     float &retWindowX, float &retWindowY);
+
+	/**
+ 	 * @brief   座標変換
+ 	 *          ウィンドウ・マウス LT(0, 0) RB(bufferX, bufferY) → フルスクリーン LT(-bufferX, bufferY) RB(bufferX, -bufferY)
+ 	 */
+	static void CoordinateWindowToFullScreen(float clientWidth,
+						 float clientHeight,
+						 float windowX, float windowY,
+						 float &retFullScreenX,
+						 float &retFullScreenY);
+
+	/**
+ 	 * @brief   MbcからWcharに変換
+ 	 */
+	static void MbcToWchar(const char *src, size_t srcLength, wchar_t *dest,
+			       size_t destLength);
 };

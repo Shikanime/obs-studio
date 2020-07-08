@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Copyright(c) Live2D Inc. All rights reserved.
  *
  * Use of this source code is governed by the Live2D Open Software license
@@ -6,14 +6,18 @@
  */
 
 #include "LAppTextureManager.hpp"
-#include <iostream>
-#define STBI_NO_STDIO
-#define STBI_ONLY_PNG
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "LAppDefine.hpp"
 #include "LAppPal.hpp"
+#include "LAppDelegate.hpp"
 
-LAppTextureManager::LAppTextureManager() {}
+#include <obs-module.h>
+
+using namespace LAppDefine;
+
+LAppTextureManager::LAppTextureManager()
+{
+	_sequenceId = 0;
+}
 
 LAppTextureManager::~LAppTextureManager()
 {
@@ -21,104 +25,302 @@ LAppTextureManager::~LAppTextureManager()
 }
 
 LAppTextureManager::TextureInfo *
-LAppTextureManager::CreateTextureFromPngFile(std::string fileName)
+LAppTextureManager::CreateTextureFromPngFile(std::string fileName,
+					     bool isPreMult, UINT maxSize)
 {
-	//search loaded texture already.
-	for (Csm::csmUint32 i = 0; i < _textures.GetSize(); i++) {
-		if (_textures[i]->fileName == fileName) {
-			return _textures[i];
-		}
+	ID3D11Device *device = LAppDelegate::GetD3dDevice();
+	ID3D11DeviceContext *context = LAppDelegate::GetD3dContext();
+
+	// wcharに変換
+	const int WCHAR_LENGTH = 512;
+	wchar_t wchrStr[WCHAR_LENGTH] = L"";
+	LAppPal::MbcToWchar(fileName.c_str(), fileName.length(), wchrStr,
+			    sizeof(wchrStr));
+
+	ID3D11Resource *texture = NULL;
+	ID3D11ShaderResourceView *textureView = NULL;
+	LAppTextureManager::TextureInfo *textureInfo = NULL;
+
+	HRESULT hr = S_OK;
+
+	if (isPreMult) {
+		hr = DirectX::CreateWICTextureFromFileEx(
+			device,
+			NULL, // NULLにするとMIP=1となる
+			wchrStr, maxSize, D3D11_USAGE_DYNAMIC,
+			D3D11_BIND_SHADER_RESOURCE, D3D11_CPU_ACCESS_WRITE, 0,
+			DirectX::WIC_LOADER_DEFAULT, &texture, &textureView);
+	} else {
+		hr = DirectX::CreateWICTextureFromFileEx(
+			device, context, wchrStr, maxSize, D3D11_USAGE_DEFAULT,
+			D3D11_BIND_SHADER_RESOURCE, 0, 0,
+			DirectX::WIC_LOADER_DEFAULT, &texture, &textureView);
 	}
 
-	GLuint textureId;
-	int width, height, channels;
-	unsigned int size;
-	unsigned char *png;
-	unsigned char *address;
+	if (SUCCEEDED(hr)) {
+		do {
+			Microsoft::WRL::ComPtr<IWICImagingFactory>
+				factoryWic; ///<
+			hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr,
+					      CLSCTX_INPROC_SERVER,
+					      IID_PPV_ARGS(&factoryWic));
+			if (FAILED(hr)) {
+				break;
+			}
 
-	address = LAppPal::LoadFileAsBytes(fileName, &size);
+			// decoder作ってファイルを渡す
+			Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
+			hr = factoryWic->CreateDecoderFromFilename(
+				wchrStr, NULL, GENERIC_READ,
+				WICDecodeMetadataCacheOnDemand, &decoder);
+			if (FAILED(hr)) {
+				break;
+			}
 
-	// png情報を取得する
-	png = stbi_load_from_memory(address, static_cast<int>(size), &width,
-				    &height, &channels, STBI_rgb_alpha);
-	{
+			// decoderからframeを取得
+			Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame;
+			hr = decoder->GetFrame(0, &frame);
+			if (FAILED(hr)) {
+				break;
+			}
+			UINT texWidth, texHeight;
+			hr = frame->GetSize(&texWidth, &texHeight);
+			if (FAILED(hr)) {
+				break;
+			}
 
-#ifdef PREMULTIPLIED_ALPHA_ENABLE
-		unsigned int *fourBytes = reinterpret_cast<unsigned int *>(png);
-		for (int i = 0; i < width * height; i++) {
-			unsigned char *p = png + i * 4;
-			fourBytes[i] = Premultiply(p[0], p[1], p[2], p[3]);
-		}
-#endif
+			// テクスチャ情報
+			textureInfo = new LAppTextureManager::TextureInfo();
+
+			if (!textureInfo) {
+				break;
+			}
+
+			// 作成成功
+			{
+				// 次のID
+				const Csm::csmUint64 addId = _sequenceId + 1;
+
+				// 情報格納
+				textureInfo->fileName = fileName;
+				textureInfo->width = static_cast<int>(texWidth);
+				textureInfo->height =
+					static_cast<int>(texHeight);
+				textureInfo->id = addId;
+
+				_sequenceId = addId;
+
+				_texturesInfo.PushBack(textureInfo);
+				_textures.PushBack(texture);
+				_textureView.PushBack(textureView);
+
+				if (isPreMult) {
+					D3D11_MAPPED_SUBRESOURCE subRes;
+					if (SUCCEEDED(context->Map(
+						    texture, 0,
+						    D3D11_MAP_WRITE_DISCARD, 0,
+						    &subRes))) {
+						// テンポラリ領域確保
+						byte *pdd = static_cast<byte *>(
+							malloc(subRes.RowPitch *
+							       texHeight));
+						// 全エリアコピー
+						frame->CopyPixels(
+							NULL, subRes.RowPitch,
+							subRes.RowPitch *
+								texHeight,
+							pdd);
+
+						ULONG *pixel32 =
+							static_cast<ULONG *>(
+								subRes.pData);
+						for (unsigned int htLoop = 0;
+						     htLoop < texHeight;
+						     htLoop++) {
+							unsigned char *pixel4 =
+								reinterpret_cast<
+									unsigned char
+										*>(
+									pdd) +
+								subRes.RowPitch *
+									htLoop;
+							unsigned int *pixel32 = reinterpret_cast<
+								unsigned int *>(
+								reinterpret_cast<
+									unsigned char
+										*>(
+									subRes.pData) +
+								subRes.RowPitch *
+									htLoop);
+
+							for (UINT i = 0;
+							     i <
+							     subRes.RowPitch;
+							     i += 4) {
+								unsigned int val = Premultiply(
+									pixel4[i +
+									       0],
+									pixel4[i +
+									       1],
+									pixel4[i +
+									       2],
+									pixel4[i +
+									       3]);
+								pixel32[(i >>
+									 2)] =
+									val;
+							}
+						}
+
+						// テンポラリ開放
+						free(pdd);
+						// 解除
+						context->Unmap(texture, 0);
+					}
+				}
+
+				return textureInfo;
+			}
+		} while (0);
 	}
 
-	// OpenGL用のテクスチャを生成する
-	glGenTextures(1, &textureId);
-	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-		     GL_UNSIGNED_BYTE, png);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-			GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	// 失敗
+	blog(LOG_WARNING, "texture Load Error : %s", fileName.c_str());
 
-	// 解放処理
-	stbi_image_free(png);
-	LAppPal::ReleaseBytes(address);
-
-	LAppTextureManager::TextureInfo *textureInfo =
-		new LAppTextureManager::TextureInfo();
-	if (textureInfo != NULL) {
-		textureInfo->fileName = fileName;
-		textureInfo->width = width;
-		textureInfo->height = height;
-		textureInfo->id = textureId;
-
-		_textures.PushBack(textureInfo);
-	}
-
-	return textureInfo;
+	return NULL;
 }
 
 void LAppTextureManager::ReleaseTextures()
 {
-	for (Csm::csmUint32 i = 0; i < _textures.GetSize(); i++) {
-		delete _textures[i];
+	for (Csm::csmUint32 i = 0; i < _texturesInfo.GetSize(); i++) {
+		// info除去
+		delete _texturesInfo[i];
+
+		// 実体除去
+		if (_textureView[i]) {
+			_textureView[i]->Release();
+			_textureView[i] = NULL;
+		}
+		if (_textures[i]) {
+			_textures[i]->Release();
+			_textures[i] = NULL;
+		}
 	}
 
+	_texturesInfo.Clear();
 	_textures.Clear();
+	_textureView.Clear();
 }
 
-void LAppTextureManager::ReleaseTexture(Csm::csmUint32 textureId)
+void LAppTextureManager::ReleaseTexture(Csm::csmUint64 textureId)
 {
-	for (Csm::csmUint32 i = 0; i < _textures.GetSize(); i++) {
-		if (_textures[i]->id != textureId) {
+	for (Csm::csmUint32 i = 0; i < _texturesInfo.GetSize(); i++) {
+		if (_texturesInfo[i]->id != textureId) {
 			continue;
 		}
-		delete _textures[i];
+		// ID一致
+
+		// info除去
+		delete _texturesInfo[i];
+
+		// 実体除去
+		if (_textureView[i]) {
+			_textureView[i]->Release();
+			_textureView[i] = NULL;
+		}
+		if (_textures[i]) {
+			_textures[i]->Release();
+			_textures[i] = NULL;
+		}
+
+		// 器除去
+		_texturesInfo.Remove(i);
 		_textures.Remove(i);
+		_textureView.Remove(i);
+
 		break;
+	}
+
+	if (_textureView.GetSize() == 0) {
+		_textureView.Clear();
+	}
+	if (_textures.GetSize() == 0) {
+		_textures.Clear();
+	}
+	if (_texturesInfo.GetSize() == 0) {
+		_texturesInfo.Clear();
 	}
 }
 
 void LAppTextureManager::ReleaseTexture(std::string fileName)
 {
-	for (Csm::csmUint32 i = 0; i < _textures.GetSize(); i++) {
-		if (_textures[i]->fileName == fileName) {
-			delete _textures[i];
+	for (Csm::csmUint32 i = 0; i < _texturesInfo.GetSize(); i++) {
+		if (_texturesInfo[i]->fileName == fileName) {
+			// info除去
+			delete _texturesInfo[i];
+
+			// 実体除去
+			if (_textureView[i]) {
+				_textureView[i]->Release();
+				_textureView[i] = NULL;
+			}
+			if (_textures[i]) {
+				_textures[i]->Release();
+				_textures[i] = NULL;
+			}
+
+			// 器除去
+			_texturesInfo.Remove(i);
 			_textures.Remove(i);
+			_textureView.Remove(i);
+
 			break;
 		}
 	}
+
+	if (_textureView.GetSize() == 0) {
+		_textureView.Clear();
+	}
+	if (_textures.GetSize() == 0) {
+		_textures.Clear();
+	}
+	if (_texturesInfo.GetSize() == 0) {
+		_texturesInfo.Clear();
+	}
+}
+
+bool LAppTextureManager::GetTexture(Csm::csmUint64 textureId,
+				    ID3D11ShaderResourceView *&retTexture) const
+{
+	retTexture = NULL;
+	for (Csm::csmUint32 i = 0; i < _texturesInfo.GetSize(); i++) {
+		if (_texturesInfo[i]->id == textureId) {
+			retTexture = _textureView[i];
+			return true;
+		}
+	}
+
+	return false;
 }
 
 LAppTextureManager::TextureInfo *
-LAppTextureManager::GetTextureInfoById(GLuint textureId) const
+LAppTextureManager::GetTextureInfoByName(std::string &fileName) const
 {
-	for (Csm::csmUint32 i = 0; i < _textures.GetSize(); i++) {
-		if (_textures[i]->id == textureId) {
-			return _textures[i];
+	for (Csm::csmUint32 i = 0; i < _texturesInfo.GetSize(); i++) {
+		if (_texturesInfo[i]->fileName == fileName) {
+			return _texturesInfo[i];
+		}
+	}
+
+	return NULL;
+}
+
+LAppTextureManager::TextureInfo *
+LAppTextureManager::GetTextureInfoById(Csm::csmUint64 textureId) const
+{
+	for (Csm::csmUint32 i = 0; i < _texturesInfo.GetSize(); i++) {
+		if (_texturesInfo[i]->id == textureId) {
+			return _texturesInfo[i];
 		}
 	}
 

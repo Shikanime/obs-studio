@@ -6,7 +6,6 @@
  */
 
 #include <obs-module.h>
-#include <GL/glew.h>
 #include "LAppDelegate.hpp"
 #include "LAppPal.hpp"
 #include "LAppLive2DManager.hpp"
@@ -42,17 +41,16 @@ void live2d_destroy(void *data)
 
 void live2d_video_render(void *data, gs_effect_t *effect)
 {
-	LAppDelegate::GetInstance()->Render();
 }
 
 static uint32_t live2d_get_width(void *data)
 {
-	return LAppDelegate::GetInstance()->GetWindowWidth();
+	return 0;
 }
 
 static uint32_t live2d_get_height(void *)
 {
-	return LAppDelegate::GetInstance()->GetWindowHeight();
+	return 0;
 }
 
 static void live2d_get_defaults(obs_data_t *) {}
@@ -65,52 +63,44 @@ obs_properties_t *live2d_get_properties(void *)
 void live2d_update(void *data, obs_data_t *settings) {}
 
 namespace {
-LAppAllocator cubismAllocator;        ///< Cubism SDK Allocator
-CubismFramework::Option cubismOption; ///< Cubism SDK Option
+LAppAllocator s_cubismAllocator;        ///< Cubism SDK Allocator
+CubismFramework::Option s_cubismOption; ///< Cubism SDK Option
+struct obs_source_info s_sourceInfo;
 } // namespace
 
 bool obs_module_load()
 {
-	// GLFWの初期化
-	if (glfwInit() == GL_FALSE) {
-		blog(LOG_ERROR, "Can't initialize GLFW");
-		return false;
-	}
-
 	// Cubism SDK の初期化
-	cubismOption.LogFunction = LAppPal::PrintMessage;
-	cubismOption.LoggingLevel = LAppDefine::CubismLoggingLevel;
-	if (!CubismFramework::StartUp(&cubismAllocator, &cubismOption)) {
-		blog(LOG_ERROR, "Can't start Cubism Framework");
+	s_cubismOption.LogFunction = LAppPal::PrintMessage;
+	s_cubismOption.LoggingLevel = LAppDefine::CubismLoggingLevel;
+	if (!CubismFramework::StartUp(&s_cubismAllocator, &s_cubismOption)) {
+		blog(LOG_ERROR, "can't start Cubism Framework");
 		return false;
 	}
 
 	//Initialize cubism
 	CubismFramework::Initialize();
 
-	struct obs_source_info info = {};
-	info.id = "obs_live2d";
-	info.type = OBS_SOURCE_TYPE_INPUT;
-	info.icon_type = OBS_ICON_TYPE_CUSTOM;
-	info.output_flags = OBS_SOURCE_VIDEO;
-	info.get_name = live2d_getname;
-	info.create = live2d_create;
-	info.destroy = live2d_destroy;
-	info.video_render = live2d_video_render;
-	info.get_width = live2d_get_width;
-	info.get_height = live2d_get_height;
-	info.get_defaults = live2d_get_defaults;
-	info.get_properties = live2d_get_properties;
-	info.update = live2d_update;
-	obs_register_source(&info);
+	s_sourceInfo.id = "obs_live2d";
+	s_sourceInfo.type = OBS_SOURCE_TYPE_INPUT;
+	s_sourceInfo.icon_type = OBS_ICON_TYPE_CUSTOM;
+	s_sourceInfo.output_flags = OBS_SOURCE_VIDEO;
+	s_sourceInfo.get_name = live2d_getname;
+	s_sourceInfo.create = live2d_create;
+	s_sourceInfo.destroy = live2d_destroy;
+	s_sourceInfo.video_render = live2d_video_render;
+	s_sourceInfo.get_width = live2d_get_width;
+	s_sourceInfo.get_height = live2d_get_height;
+	s_sourceInfo.get_defaults = live2d_get_defaults;
+	s_sourceInfo.get_properties = live2d_get_properties;
+	s_sourceInfo.update = live2d_update;
+	obs_register_source(&s_sourceInfo);
 
 	return true;
 }
 
 void obs_module_unload()
 {
-	glfwTerminate();
-
 	// リソースを解放
 	LAppLive2DManager::ReleaseInstance();
 

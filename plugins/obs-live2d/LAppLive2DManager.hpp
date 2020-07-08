@@ -7,9 +7,11 @@
 
 #pragma once
 
+#include <Rendering/D3D11/CubismNativeInclude_D3D11.hpp>
 #include <CubismFramework.hpp>
 #include <Math/CubismMatrix44.hpp>
 #include <Type/csmVector.hpp>
+#include <Type/csmMap.hpp>
 
 class LAppModel;
 
@@ -21,6 +23,20 @@ class LAppModel;
 class LAppLive2DManager {
 
 public:
+	/**
+ 	 * @brief 解放するモデル格納
+ 	 */
+	struct ReleaseModel {
+		ReleaseModel()
+		{
+			_model = NULL;
+			_counter = 0;
+		}
+
+		LAppModel *_model;
+		int _counter;
+	};
+
 	/**
 	 * @brief   クラスのインスタンス（シングルトン）を返す。<br>
 	 *           インスタンスが生成されていない場合は内部でインスタンを生成する。
@@ -84,10 +100,20 @@ public:
 	void ChangeScene(Csm::csmInt32 index);
 
 	/**
-	* @brief   モデル個数を得る
-	* @return  所持モデル個数
-	*/
+ 	 * @brief   フレーム末端の処理
+ 	 */
+	void EndFrame();
+
+	/**
+ 	 * @brief   モデル個数を得る
+ 	 * @return  所持モデル個数
+ 	 */
 	Csm::csmUint32 GetModelNum() const;
+
+	/**
+ 	 * @brief   ウィンドウサイズが変更された際に呼ばれる処理
+ 	 */
+	void ResizedWindow();
 
 private:
 	/**
@@ -103,4 +129,10 @@ private:
 	Csm::CubismMatrix44 *_viewMatrix; ///< モデル描画に用いるView行列
 	Csm::csmVector<LAppModel *> _models; ///< モデルインスタンスのコンテナ
 	Csm::csmInt32 _sceneIndex; ///< 表示するシーンのインデックス値
+
+	Csm::csmVector<ReleaseModel>
+		_releaseModel; ///< 解放予定モデルインスタンスのコンテナ
+
+	Csm::csmMap<LAppModel *, int>
+		_releaseModels; ///< モデルインスタンスのコンテナ(解放予約、解放カウント)
 };

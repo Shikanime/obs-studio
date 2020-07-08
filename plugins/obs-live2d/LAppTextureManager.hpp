@@ -7,9 +7,13 @@
 
 #pragma once
 
+#include <wincodec.h> // for IWICImagingFactory
+#include <WICTextureLoader.h>
+
 #include <string>
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+
+#include <Rendering/D3D11/CubismNativeInclude_D3D11.hpp>
+#include <Type/CubismBasicType.hpp>
 #include <Type/csmVector.hpp>
 
 /**
@@ -23,7 +27,7 @@ public:
 	 * @brief 画像情報構造体
 	 */
 	struct TextureInfo {
-		GLuint id;            ///< テクスチャID
+		Csm::csmUint64 id;    ///< テクスチャID
 		int width;            ///< 横幅
 		int height;           ///< 高さ
 		std::string fileName; ///< ファイル名
@@ -60,12 +64,15 @@ public:
 	}
 
 	/**
-	 * @brief 画像読み込み
-	 *
-	 * @param[in] fileName  読み込む画像ファイルパス名
-	 * @return 画像情報。読み込み失敗時はNULLを返す
-	 */
-	TextureInfo *CreateTextureFromPngFile(std::string fileName);
+ 	 * @brief 画像読み込み
+ 	 *
+ 	 * @param[in]   fileName    読み込む画像ファイルパス名
+ 	 * @param[in]   isPreMult   ロード時にピクセルのα値を計算して格納しなおす 基本的にfalseで良い
+ 	 * @param[in]   maxSize     テクスチャの最大サイズ 0だと画像の幅と高さを採用する
+ 	 * @return 画像情報。読み込み失敗時はNULLを返す
+ 	 */
+	TextureInfo *CreateTextureFromPngFile(std::string fileName,
+					      bool isPreMult, UINT maxSize = 0);
 
 	/**
 	 * @brief 画像の解放
@@ -75,12 +82,12 @@ public:
 	void ReleaseTextures();
 
 	/**
-	* @brief 画像の解放
-	*
-	* 指定したテクスチャIDの画像を解放する
-	* @param[in] textureId  解放するテクスチャID
-	**/
-	void ReleaseTexture(Csm::csmUint32 textureId);
+ 	 * @brief 画像の解放
+ 	 *
+ 	 * 指定したテクスチャIDの画像を解放する
+ 	 * @param[in] textureId  解放するテクスチャID
+ 	 **/
+	void ReleaseTexture(Csm::csmUint64 textureId);
 
 	/**
 	 * @brief 画像の解放
@@ -91,13 +98,36 @@ public:
 	void ReleaseTexture(std::string fileName);
 
 	/**
-	* @brief テクスチャIDからテクスチャ情報を得る
-	*
-	* @param   textureId[in]       取得したいテクスチャID
-	* @return  テクスチャが存在していればTextureInfoが返る
-	*/
-	TextureInfo *GetTextureInfoById(GLuint textureId) const;
+ 	 * @brief テクスチャ・サンプラーの取得
+ 	 *
+ 	 * @param   textureId[in]       取得したいテクスチャID CreateTextureFromGnfFileで返ってきたinfoのものを指定すると良い
+ 	 * @param   retTexture[out]    成功時、IDirect3DTexture9へのポインタが返る
+ 	 * @return  テクスチャが存在していればtrueが返る
+ 	 */
+	bool GetTexture(Csm::csmUint64 textureId,
+			ID3D11ShaderResourceView *&retTexture) const;
+
+	/**
+ 	 * @brief ファイル名からテクスチャ情報を得る
+ 	 *
+ 	 * @param   fileName[in]       取得したいテクスチャファイル名
+ 	 * @return  テクスチャが存在していればTextureInfoが返る
+ 	 */
+	TextureInfo *GetTextureInfoByName(std::string &fileName) const;
+
+	/**
+ 	 * @brief ファイル名からテクスチャ情報を得る
+ 	 *
+ 	 * @param   textureId[in]       取得したいテクスチャID
+ 	 * @return  テクスチャが存在していればTextureInfoが返る
+ 	 */
+	TextureInfo *GetTextureInfoById(Csm::csmUint64 textureId) const;
 
 private:
-	Csm::csmVector<TextureInfo *> _textures;
+	Csm::csmVector<ID3D11Resource *> _textures; ///< DX11テクスチャ
+	Csm::csmVector<ID3D11ShaderResourceView *>
+		_textureView;                        ///< DX11テクスチャ
+	Csm::csmVector<TextureInfo *> _texturesInfo; ///< テクスチャ情報
+
+	Csm::csmUint64 _sequenceId; ///< 付与するための通しID
 };

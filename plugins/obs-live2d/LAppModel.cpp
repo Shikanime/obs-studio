@@ -6,14 +6,14 @@
  */
 
 #include "LAppModel.hpp"
+#include <obs-module.h>
 #include <fstream>
-#include <util/base.h>
 #include <vector>
 #include <CubismModelSettingJson.hpp>
 #include <Motion/CubismMotion.hpp>
 #include <Physics/CubismPhysics.hpp>
 #include <CubismDefaultParameterId.hpp>
-#include <Rendering/OpenGL/CubismRenderer_OpenGLES2.hpp>
+#include <Rendering/D3D11/CubismRenderer_D3D11.hpp>
 #include <Utils/CubismString.hpp>
 #include <Id/CubismIdManager.hpp>
 #include <Motion/CubismMotionQueueEntry.hpp>
@@ -29,20 +29,27 @@ using namespace LAppDefine;
 namespace {
 csmByte *CreateBuffer(const csmChar *path, csmSizeInt *size)
 {
-	blog(LOG_DEBUG, "Create buffer: %s ", path);
+	blog(LOG_DEBUG, "create buffer: %s ", path);
 	return LAppPal::LoadFileAsBytes(path, size);
 }
 
 void DeleteBuffer(csmByte *buffer, const csmChar *path = "")
 {
-	blog(LOG_DEBUG, "Delete buffer: %s", path);
+	blog(LOG_DEBUG, "delete buffer: %s", path);
 	LAppPal::ReleaseBytes(buffer);
 }
 }
 
 LAppModel::LAppModel()
-	: CubismUserModel(), _modelSetting(NULL), _userTimeSeconds(0.0f)
+	: CubismUserModel(),
+	  _modelSetting(NULL),
+	  _userTimeSeconds(0.0f),
+	  _deleteModel(false)
 {
+#ifdef DEBUG_MODEL
+	_debugMode = true;
+#endif
+
 	_idParamAngleX = CubismFramework::GetIdManager()->GetId(ParamAngleX);
 	_idParamAngleY = CubismFramework::GetIdManager()->GetId(ParamAngleY);
 	_idParamAngleZ = CubismFramework::GetIdManager()->GetId(ParamAngleZ);
@@ -65,16 +72,22 @@ LAppModel::~LAppModel()
 		const csmChar *group = _modelSetting->GetMotionGroupName(i);
 		ReleaseMotionGroup(group);
 	}
-	delete (_modelSetting);
+
+	// テクスチャの開放
+	for (csmUint32 i = 0; i < _bindTextureId.GetSize(); i++) {
+		LAppDelegate::GetInstance()->GetTextureManager()->ReleaseTexture(
+			_bindTextureId[i]);
+	}
+	_bindTextureId.Clear();
+
+	delete _modelSetting;
 }
 
 void LAppModel::LoadAssets(const csmChar *dir, const csmChar *fileName)
 {
 	_modelHomeDir = dir;
 
-	if (_debugMode) {
-		blog(LOG_DEBUG, "Load model setting: %s", fileName);
-	}
+	blog(LOG_DEBUG, "load model setting: %s", fileName);
 
 	csmSizeInt size;
 	const csmString path = csmString(dir) + fileName;
@@ -105,10 +118,8 @@ void LAppModel::SetupModel(ICubismModelSetting *setting)
 		csmString path = _modelSetting->GetModelFileName();
 		path = _modelHomeDir + path;
 
-		if (_debugMode) {
-			blog(LOG_DEBUG, "Create model: %s",
-			     setting->GetModelFileName());
-		}
+		blog(LOG_DEBUG, "create model: %s",
+		     setting->GetModelFileName());
 
 		buffer = CreateBuffer(path.GetRawString(), &size);
 		LoadModel(buffer, size);
@@ -242,10 +253,8 @@ void LAppModel::PreloadMotionGroup(const csmChar *group)
 		csmString path = _modelSetting->GetMotionFileName(group, i);
 		path = _modelHomeDir + path;
 
-		if (_debugMode) {
-			blog(LOG_DEBUG, "Load motion: %s => [%s_%d] ",
-			     path.GetRawString(), group, i);
-		}
+		blog(LOG_DEBUG, "load motion: %s => [%s_%d] ",
+		     path.GetRawString(), group, i);
 
 		csmByte *buffer;
 		csmSizeInt size;
@@ -287,11 +296,6 @@ void LAppModel::ReleaseMotionGroup(const csmChar *group) const
 	}
 }
 
-/**
-* @brief すべてのモーションデータの解放
-*
-* すべてのモーションデータを解放する。
-*/
 void LAppModel::ReleaseMotions()
 {
 	for (csmMap<csmString, ACubismMotion *>::const_iterator iter =
@@ -303,11 +307,6 @@ void LAppModel::ReleaseMotions()
 	_motions.Clear();
 }
 
-/**
-* @brief すべての表情データの解放
-*
-* すべての表情データを解放する。
-*/
 void LAppModel::ReleaseExpressions()
 {
 	for (csmMap<csmString, ACubismMotion *>::const_iterator iter =
@@ -409,9 +408,7 @@ CubismMotionQueueEntryHandle LAppModel::StartMotion(
 	if (priority == PriorityForce) {
 		_motionManager->SetReservePriority(priority);
 	} else if (!_motionManager->ReserveMotion(priority)) {
-		if (_debugMode) {
-			blog(LOG_WARNING, "Can't start motion.");
-		}
+		blog(LOG_DEBUG, "can't start motion.");
 		return InvalidMotionQueueEntryHandleValue;
 	}
 
@@ -458,9 +455,7 @@ CubismMotionQueueEntryHandle LAppModel::StartMotion(
 		path = _modelHomeDir + path;
 	}
 
-	if (_debugMode) {
-		blog(LOG_DEBUG, "Start motion: [%s_%d]", group, no);
-	}
+	blog(LOG_DEBUG, "start motion: [%s_%d]", group, no);
 	return _motionManager->StartMotionPriority(motion, autoDelete,
 						   priority);
 }
@@ -480,23 +475,22 @@ CubismMotionQueueEntryHandle LAppModel::StartRandomMotion(
 
 void LAppModel::DoDraw()
 {
-	if (_model == NULL) {
-		return;
-	}
-
-	GetRenderer<Rendering::CubismRenderer_OpenGLES2>()->DrawModel();
+	GetRenderer<Rendering::CubismRenderer_D3D11>()->DrawModel();
 }
 
-void LAppModel::Draw(CubismMatrix44 &matrix)
+void LAppModel::Draw(Csm::CubismMatrix44 &matrix)
 {
-	if (_model == NULL) {
+	Rendering::CubismRenderer_D3D11 *renderer =
+		GetRenderer<Rendering::CubismRenderer_D3D11>();
+
+	if (_model == NULL || _deleteModel || renderer == NULL) {
 		return;
 	}
 
+	// 投影行列と乗算
 	matrix.MultiplyByMatrix(_modelMatrix);
 
-	GetRenderer<Rendering::CubismRenderer_OpenGLES2>()->SetMvpMatrix(
-		&matrix);
+	renderer->SetMvpMatrix(&matrix);
 
 	DoDraw();
 }
@@ -523,17 +517,13 @@ csmBool LAppModel::HitTest(const csmChar *hitAreaName, csmFloat32 x,
 void LAppModel::SetExpression(const csmChar *expressionID)
 {
 	ACubismMotion *motion = _expressions[expressionID];
-	if (_debugMode) {
-		blog(LOG_DEBUG, "Expression: [%s]", expressionID);
-	}
+	blog(LOG_DEBUG, "expression: [%s]", expressionID);
 
 	if (motion != NULL) {
 		_expressionManager->StartMotionPriority(motion, false,
 							PriorityForce);
 	} else {
-		if (_debugMode)
-			blog(LOG_WARNING, "Expression[%s] is null ",
-			     expressionID);
+		blog(LOG_DEBUG, "expression[%s] is null ", expressionID);
 	}
 }
 
@@ -568,6 +558,17 @@ void LAppModel::ReloadRenderer()
 
 void LAppModel::SetupTextures()
 {
+#ifdef PREMULTIPLIED_ALPHA_ENABLE
+	const bool isPreMult = true;
+	// αが合成されていないテクスチャを無理矢理ここで合成する実験を行う場合はtrueにする
+	const bool isTextureMult = false;
+#else
+	const bool isPreMult = false;
+	const bool isTextureMult = false;
+#endif
+
+	_bindTextureId.Clear();
+
 	for (csmInt32 modelTextureNumber = 0;
 	     modelTextureNumber < _modelSetting->GetTextureCount();
 	     modelTextureNumber++) {
@@ -577,7 +578,7 @@ void LAppModel::SetupTextures()
 			continue;
 		}
 
-		//OpenGLのテクスチャユニットにテクスチャをロードする
+		//テクスチャをロードする
 		csmString texturePath =
 			_modelSetting->GetTextureFileName(modelTextureNumber);
 		texturePath = _modelHomeDir + texturePath;
@@ -586,21 +587,29 @@ void LAppModel::SetupTextures()
 			LAppDelegate::GetInstance()
 				->GetTextureManager()
 				->CreateTextureFromPngFile(
-					texturePath.GetRawString());
-		const csmInt32 glTextueNumber = texture->id;
+					texturePath.GetRawString(),
+					isTextureMult);
 
-		//OpenGL
-		GetRenderer<Rendering::CubismRenderer_OpenGLES2>()->BindTexture(
-			modelTextureNumber, glTextueNumber);
+		//
+		if (texture) {
+			const csmUint64 textureManageId = texture->id;
+
+			ID3D11ShaderResourceView *textureView = NULL;
+			if (LAppDelegate::GetInstance()
+				    ->GetTextureManager()
+				    ->GetTexture(textureManageId,
+						 textureView)) {
+				GetRenderer<Rendering::CubismRenderer_D3D11>()
+					->BindTexture(modelTextureNumber,
+						      textureView);
+				_bindTextureId.PushBack(textureManageId);
+			}
+		}
 	}
 
-#ifdef PREMULTIPLIED_ALPHA_ENABLE
-	GetRenderer<Rendering::CubismRenderer_OpenGLES2>()->IsPremultipliedAlpha(
-		true);
-#else
-	GetRenderer<Rendering::CubismRenderer_OpenGLES2>()->IsPremultipliedAlpha(
-		false);
-#endif
+	// premultであるなら設定
+	GetRenderer<Rendering::CubismRenderer_D3D11>()->IsPremultipliedAlpha(
+		isPreMult);
 }
 
 void LAppModel::MotionEventFired(const csmString &eventValue)
@@ -608,7 +617,7 @@ void LAppModel::MotionEventFired(const csmString &eventValue)
 	CubismLogInfo("%s is fired on LAppModel!!", eventValue.GetRawString());
 }
 
-Csm::Rendering::CubismOffscreenFrame_OpenGLES2 &LAppModel::GetRenderBuffer()
+Csm::Rendering::CubismOffscreenFrame_D3D11 &LAppModel::GetRenderBuffer()
 {
 	return _renderBuffer;
 }

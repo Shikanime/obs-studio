@@ -6,7 +6,6 @@
  */
 
 #include "LAppView.hpp"
-#include <obs-module.h>
 #include <math.h>
 #include <string>
 #include "LAppPal.hpp"
@@ -20,8 +19,7 @@
 using namespace std;
 using namespace LAppDefine;
 
-LAppView::LAppView()
-	: _programId(0), _renderSprite(NULL), _renderTarget(SelectTarget_None)
+LAppView::LAppView() : _renderSprite(NULL), _renderTarget(SelectTarget_None)
 {
 	_clearColor[0] = 1.0f;
 	_clearColor[1] = 1.0f;
@@ -38,6 +36,7 @@ LAppView::LAppView()
 LAppView::~LAppView()
 {
 	_renderBuffer.DestroyOffscreenFrame();
+
 	delete _renderSprite;
 	delete _viewMatrix;
 	delete _deviceToScreen;
@@ -46,8 +45,7 @@ LAppView::~LAppView()
 void LAppView::Initialize()
 {
 	int width, height;
-	glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &width,
-			  &height);
+	LAppDelegate::GetClientSize(width, height);
 
 	if (width == 0 || height == 0) {
 		return;
@@ -79,28 +77,31 @@ void LAppView::Initialize()
 
 void LAppView::Render()
 {
-	LAppLive2DManager *Live2DManager = LAppLive2DManager::GetInstance();
+	LAppLive2DManager *live2DManager = LAppLive2DManager::GetInstance();
+	if (!live2DManager) {
+		return;
+	}
+
+	// スプライト描画
+	int width, height;
+	LAppDelegate::GetInstance()->GetClientSize(width, height);
 
 	// Cubism更新・描画
-	Live2DManager->OnUpdate();
+	live2DManager->OnUpdate();
 
 	// 各モデルが持つ描画ターゲットをテクスチャとする場合
 	if (_renderTarget == SelectTarget_ModelFrameBuffer && _renderSprite) {
-		const GLfloat uvVertex[] = {
-			1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-		};
-
-		for (csmUint32 i = 0; i < Live2DManager->GetModelNum(); i++) {
+		for (csmUint32 i = 0; i < live2DManager->GetModelNum(); i++) {
 			float alpha = GetSpriteAlpha(
 				i); // サンプルとしてαに適当な差をつける
 			_renderSprite->SetColor(1.0f, 1.0f, 1.0f, alpha);
 
-			LAppModel *model = Live2DManager->GetModel(i);
+			LAppModel *model = live2DManager->GetModel(i);
 			if (model) {
 				_renderSprite->RenderImmidiate(
+					width, height,
 					model->GetRenderBuffer()
-						.GetColorBuffer(),
-					uvVertex);
+						.GetTextureView());
 			}
 		}
 	}
@@ -108,28 +109,44 @@ void LAppView::Render()
 
 void LAppView::InitializeSprite()
 {
-	_programId = LAppDelegate::GetInstance()->CreateShader();
-
+	// 描画領域サイズ
 	int width, height;
-	glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &width,
-			  &height);
+	LAppDelegate::GetInstance()->GetClientSize(width, height);
 
 	LAppTextureManager *textureManager =
 		LAppDelegate::GetInstance()->GetTextureManager();
-	const string resourcesPath =
-		obs_module_file("resources") + std::string("/");
+	const string resourcesPath = ResourcesPath;
 
-	string imageName = BackImageName;
-	LAppTextureManager::TextureInfo *backgroundTexture =
-		textureManager->CreateTextureFromPngFile(resourcesPath +
-							 imageName);
-
-	// 画面全体を覆うサイズ
 	float x = width * 0.5f;
 	float y = height * 0.5f;
 	_renderSprite = new LAppSprite(x, y, static_cast<float>(width),
-				       static_cast<float>(height), 0,
-				       _programId);
+				       static_cast<float>(height), 0);
+}
+
+void LAppView::ReleaseSprite()
+{
+	delete _renderSprite;
+	_renderSprite = NULL;
+}
+
+void LAppView::ResizeSprite()
+{
+	LAppTextureManager *textureManager =
+		LAppDelegate::GetInstance()->GetTextureManager();
+	if (!textureManager) {
+		return;
+	}
+
+	// 描画領域サイズ
+	int width, height;
+	LAppDelegate::GetInstance()->GetClientSize(width, height);
+
+	if (_renderSprite) {
+		float x = width * 0.5f;
+		float y = height * 0.5f;
+		_renderSprite->ResetRect(x, y, static_cast<float>(width),
+					 static_cast<float>(height));
+	}
 }
 
 float LAppView::TransformViewX(float deviceX) const
@@ -161,7 +178,7 @@ float LAppView::TransformScreenY(float deviceY) const
 void LAppView::PreModelDraw(LAppModel &refModel)
 {
 	// 別のレンダリングターゲットへ向けて描画する場合の使用するフレームバッファ
-	Csm::Rendering::CubismOffscreenFrame_OpenGLES2 *useTarget = NULL;
+	Csm::Rendering::CubismOffscreenFrame_D3D11 *useTarget = NULL;
 
 	if (_renderTarget !=
 	    SelectTarget_None) { // 別のレンダリングターゲットへ向けて描画する場合
@@ -173,20 +190,23 @@ void LAppView::PreModelDraw(LAppModel &refModel)
 
 		if (!useTarget->IsValid()) { // 描画ターゲット内部未作成の場合はここで作成
 			int width, height;
-			glfwGetWindowSize(
-				LAppDelegate::GetInstance()->GetWindow(),
-				&width, &height);
+			LAppDelegate::GetClientSize(width, height);
+
 			if (width != 0 && height != 0) {
 				// モデル描画キャンバス
 				useTarget->CreateOffscreenFrame(
+					LAppDelegate::GetInstance()
+						->GetD3dDevice(),
 					static_cast<csmUint32>(width),
 					static_cast<csmUint32>(height));
 			}
 		}
 
 		// レンダリング開始
-		useTarget->BeginDraw();
-		useTarget->Clear(_clearColor[0], _clearColor[1], _clearColor[2],
+		useTarget->BeginDraw(
+			LAppDelegate::GetInstance()->GetD3dContext());
+		useTarget->Clear(LAppDelegate::GetInstance()->GetD3dContext(),
+				 _clearColor[0], _clearColor[1], _clearColor[2],
 				 _clearColor[3]); // 背景クリアカラー
 	}
 }
@@ -194,7 +214,7 @@ void LAppView::PreModelDraw(LAppModel &refModel)
 void LAppView::PostModelDraw(LAppModel &refModel)
 {
 	// 別のレンダリングターゲットへ向けて描画する場合の使用するフレームバッファ
-	Csm::Rendering::CubismOffscreenFrame_OpenGLES2 *useTarget = NULL;
+	Csm::Rendering::CubismOffscreenFrame_D3D11 *useTarget = NULL;
 
 	if (_renderTarget !=
 	    SelectTarget_None) { // 別のレンダリングターゲットへ向けて描画する場合
@@ -205,19 +225,21 @@ void LAppView::PostModelDraw(LAppModel &refModel)
 				    : &refModel.GetRenderBuffer();
 
 		// レンダリング終了
-		useTarget->EndDraw();
+		useTarget->EndDraw(
+			LAppDelegate::GetInstance()->GetD3dContext());
 
 		// LAppViewの持つフレームバッファを使うなら、スプライトへの描画はここ
 		if (_renderTarget == SelectTarget_ViewFrameBuffer &&
 		    _renderSprite) {
-			const GLfloat uvVertex[] = {
-				1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-			};
+			// スプライト描画
+			int width, height;
+			LAppDelegate::GetInstance()->GetClientSize(width,
+								   height);
 
 			_renderSprite->SetColor(1.0f, 1.0f, 1.0f,
 						GetSpriteAlpha(0));
 			_renderSprite->RenderImmidiate(
-				useTarget->GetColorBuffer(), uvVertex);
+				width, height, useTarget->GetTextureView());
 		}
 	}
 }
@@ -232,6 +254,11 @@ void LAppView::SetRenderTargetClearColor(float r, float g, float b)
 	_clearColor[0] = r;
 	_clearColor[1] = g;
 	_clearColor[2] = b;
+}
+
+void LAppView::DestroyOffscreenFrame()
+{
+	_renderBuffer.DestroyOffscreenFrame();
 }
 
 float LAppView::GetSpriteAlpha(int assign) const

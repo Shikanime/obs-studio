@@ -9,35 +9,21 @@ project(obs-live2d)
 if(DEFINED CSMDIR)
 	set(CubismCore_Dir ${CSMDIR}/Core)
 	set(CubismFramework_Dir ${CSMDIR}/Framework)
+elseif(NOT DEFINED CubismCore_Dir OR NOT DEFINED CubismFramework_Dir)
+	message(FATAL_ERROR "Missing Cubism SDK")
 endif()
 
-if(NOT DEFINED STBDIR)
-	message(FATAL_ERROR "Missing STB library")
+if(NOT DEFINED DXTKDIR)
+	message(FATAL_ERROR "Missing DirectX Toolkit")
 endif()
-
-if(NOT DEFINED GLEWDIR)
-	message(FATAL_ERROR "Missing GLEW library")
-endif()
-
-if(NOT DEFINED GLFWDIR)
-	message(FATAL_ERROR "Missing GLFWDIR library")
-endif()
-
-# Suppress generation of ZERO_CHECK project.
-set(CMAKE_SUPPRESS_REGENERATION ON)
-
-# Surpress GLEW and GLFW process.
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-set(BUILD_UTILS OFF CACHE BOOL "" FORCE)
 
 # Detect architecture.
 if(CMAKE_EXE_LINKER_FLAGS STREQUAL "/machine:x64 /OPT:REF")
 	set(ARCH x86_64)
+	set(DX_ARCH x64)
 elseif(CMAKE_EXE_LINKER_FLAGS STREQUAL "/machine:X86 /OPT:REF")
 	set(ARCH x86)
+	set(DX_ARCH Win32)
 else()
 	message(FATAL_ERROR "Invalid linker flag ${CMAKE_EXE_LINKER_FLAGS}.")
 endif()
@@ -45,12 +31,19 @@ endif()
 if(MSVC_VERSION MATCHES 1800)
 	# Visual Studio 2013
 	set(COMPILER 120)
+	set(MSVC_YEAR 2013)
 elseif(MSVC_VERSION MATCHES 1900)
 	# Visual Studio 2015
 	set(COMPILER 140)
-elseif(MSVC_VERSION GREATER_EQUAL 1910)
+	set(MSVC_YEAR 2015)
+elseif(MSVC_VERSION GREATER_EQUAL 1910 AND MSVC_VERSION LESS 1920)
 	# Visual Studio 2017
 	set(COMPILER 141)
+	set(MSVC_YEAR 2017)
+elseif(MSVC_VERSION GREATER_EQUAL 1920 AND MSVC_VERSION LESS 1930)
+	# Visual Studio 2019
+	set(COMPILER 142)
+	set(MSVC_YEAR 2019)
 elseif(MSVC)
 	message(FATAL_ERROR "Unsupported Visual C++ compiler used.")
 else()
@@ -76,23 +69,19 @@ set_target_properties(Live2DCubismCore
 			${CORE_LIB_SUFFIX}/Live2DCubismCore_${CRT}.lib
 		INTERFACE_INCLUDE_DIRECTORIES ${CubismCore_Dir}/include)
 
-# Add GLEW ,GLFW.
-add_subdirectory(${GLEWDIR}/build/cmake ${CMAKE_CURRENT_BINARY_DIR}/glew)
-add_subdirectory(${GLFWDIR} ${CMAKE_CURRENT_BINARY_DIR}/glfw)
-
 # Specify Cubism Framework rendering.
-set(FRAMEWORK_SOURCE OpenGL)
+set(FRAMEWORK_SOURCE D3D11)
 # Add Cubism Native Framework.
 add_subdirectory(${CubismFramework_Dir} ${CMAKE_CURRENT_BINARY_DIR}/Framework)
-# Add rendering definition to framework.
-target_compile_definitions(Framework PUBLIC CSM_TARGET_WIN_GL)
-# Add include path of GLEW to framework.
-target_include_directories(Framework PUBLIC ${GLEWDIR}/include)
+# Add include path to framework.
+target_include_directories(Framework PUBLIC ${DXTKDIR}/Inc)
 # Link libraries to framework.
-target_link_libraries(Framework Live2DCubismCore glew_s)
-
-# Find opengl libraries.
-find_package(OpenGL REQUIRED)
+target_link_libraries(Framework
+	Live2DCubismCore
+	${DXTKDIR}/Bin/Desktop_${MSVC_YEAR}/${DX_ARCH}/$<CONFIG>/DirectXTK.lib
+	d3d11.lib
+	d3dcompiler.lib
+)
 
 set(obs-live2d_PLATFORM_DEPS)
 set(obs-live2d_SOURCES
@@ -116,26 +105,20 @@ set(obs-live2d_SOURCES
 	LAppView.hpp
 	obs-live2d-plugin.cpp)
 
-if(WIN32)
-	set(MODULE_DESCRIPTION "OBS Live2D module")
-	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in obs-live2d.rc)
-	list(APPEND obs-live2d_SOURCES obs-live2d.rc)
-endif()
+set(MODULE_DESCRIPTION "OBS Live2D module")
+configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in obs-live2d.rc)
+list(APPEND obs-live2d_SOURCES obs-live2d.rc)
 
 # Make executable app.
 add_library(obs-live2d MODULE ${obs-live2d_SOURCES})
 # Link libraries to app.
 target_link_libraries(obs-live2d
 	Framework
-	glfw
-	${OPENGL_LIBRARIES}
 	# Solve the MSVCRT confliction.
 	debug -NODEFAULTLIB:libcmtd.lib
 	optimized -NODEFAULTLIB:libcmt.lib
 	libobs
 	${obs-live2d_PLATFORM_DEPS})
-# Specify include directories.
-target_include_directories(obs-live2d PRIVATE ${STBDIR})
 
 # Set project properties.
 set_target_properties(obs-live2d PROPERTIES FOLDER "plugins")

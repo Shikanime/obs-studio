@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright(c) Live2D Inc. All rights reserved.
  *
  * Use of this source code is governed by the Live2D Open Software license
@@ -23,6 +23,9 @@ const csmFloat32 ViewLogicalMaxLeft = -2.0f;
 const csmFloat32 ViewLogicalMaxRight = 2.0f;
 const csmFloat32 ViewLogicalMaxBottom = -2.0f;
 const csmFloat32 ViewLogicalMaxTop = 2.0f;
+
+// 相対パス
+const csmChar *ResourcesPath = "Resources/";
 
 // モデルの後ろにある背景の画像ファイル
 const csmChar *BackImageName = "back_class_normal.png";
@@ -56,6 +59,6 @@ const CubismFramework::Option::LogLevel CubismLoggingLevel =
 	CubismFramework::Option::LogLevel_Verbose;
 
 // デフォルトのレンダーターゲットサイズ
-const csmInt32 RenderTargetWidth = 1920;
-const csmInt32 RenderTargetHeight = 1080;
+const csmInt32 RenderTargetWidth = 1900;
+const csmInt32 RenderTargetHeight = 1000;
 }

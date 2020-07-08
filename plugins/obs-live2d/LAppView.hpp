@@ -7,12 +7,12 @@
 
 #pragma once
 
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <Rendering/D3D11/CubismNativeInclude_D3D11.hpp>
+#include <Type/csmVector.hpp>
+#include <Rendering/D3D11/CubismOffscreenSurface_D3D11.hpp>
 #include <Math/CubismMatrix44.hpp>
 #include <Math/CubismViewMatrix.hpp>
 #include "CubismFramework.hpp"
-#include <Rendering/OpenGL/CubismOffscreenSurface_OpenGLES2.hpp>
 
 class LAppSprite;
 class LAppModel;
@@ -23,8 +23,8 @@ class LAppModel;
 class LAppView {
 public:
 	/**
-	* @brief LAppModelのレンダリング先
-	*/
+ 	 * @brief LAppModelのレンダリング先
+ 	 */
 	enum SelectTarget {
 		SelectTarget_None, ///< デフォルトのフレームバッファにレンダリング
 		SelectTarget_ModelFrameBuffer, ///< LAppModelが各自持つフレームバッファにレンダリング
@@ -57,6 +57,16 @@ public:
 	void InitializeSprite();
 
 	/**
+	 * @brief スプライト系の開放
+	 */
+	void ReleaseSprite();
+
+	/**
+	 * @brief スプライト系のサイズ再設定
+	 */
+	void ResizeSprite();
+
+	/**
 	 * @brief X座標をView座標に変換する。
 	 *
 	 * @param[in]       deviceX            デバイスX座標
@@ -85,43 +95,47 @@ public:
 	float TransformScreenY(float deviceY) const;
 
 	/**
-	* @brief   モデル1体を描画する直前にコールされる
-	*/
+ 	 * @brief   モデル1体を描画する直前にコールされる
+ 	 */
 	void PreModelDraw(LAppModel &refModel);
 
 	/**
-	* @brief   モデル1体を描画した直後にコールされる
-	*/
+ 	 * @brief   モデル1体を描画した直後にコールされる
+ 	 */
 	void PostModelDraw(LAppModel &refModel);
 
 	/**
-	* @brief   別レンダリングターゲットにモデルを描画するサンプルで
-	*           描画時のαを決定する
-	*/
+ 	 * @brief   別レンダリングターゲットにモデルを描画するサンプルで
+ 	 *           描画時のαを決定する
+ 	 */
 	float GetSpriteAlpha(int assign) const;
 
 	/**
-	* @brief レンダリング先を切り替える
-	*/
+ 	 * @brief レンダリング先を切り替える
+ 	 */
 	void SwitchRenderingTarget(SelectTarget targetType);
 
 	/**
-	* @brief レンダリング先をデフォルト以外に切り替えた際の背景クリア色設定
-	* @param[in]   r   赤(0.0~1.0)
-	* @param[in]   g   緑(0.0~1.0)
-	* @param[in]   b   青(0.0~1.0)
-	*/
+ 	 * @brief レンダリング先をデフォルト以外に切り替えた際の背景クリア色設定
+ 	 * @param[in]   r   赤(0.0~1.0)
+ 	 * @param[in]   g   緑(0.0~1.0)
+ 	 * @param[in]   b   青(0.0~1.0)
+ 	 */
 	void SetRenderTargetClearColor(float r, float g, float b);
+
+	/**
+ 	 * @brief   内部レンダリングバッファの破棄
+ 	 */
+	void DestroyOffscreenFrame();
 
 private:
 	Csm::CubismMatrix44 *_deviceToScreen; ///< デバイスからスクリーンへの行列
 	Csm::CubismViewMatrix *_viewMatrix; ///< viewMatrix
-	GLuint _programId;                  ///< シェーダID
 
 	// レンダリング先を別ターゲットにする方式の場合に使用
 	LAppSprite *
 		_renderSprite; ///< モードによっては_renderBufferのテクスチャを描画
-	Csm::Rendering::CubismOffscreenFrame_OpenGLES2
+	Csm::Rendering::CubismOffscreenFrame_D3D11
 		_renderBuffer; ///< モードによってはCubismモデル結果をこっちにレンダリング
 	SelectTarget _renderTarget; ///< レンダリング先の選択肢
 	float _clearColor[4]; ///< レンダリングターゲットのクリアカラー

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright(c) Live2D Inc. All rights reserved.
  *
  * Use of this source code is governed by the Live2D Open Software license
@@ -6,11 +6,9 @@
  */
 
 #include "LAppLive2DManager.hpp"
-#include <string>
 #include <obs-module.h>
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <Rendering/CubismRenderer.hpp>
+#include <string>
+#include <Rendering/D3D11/CubismRenderer_D3D11.hpp>
 #include "LAppPal.hpp"
 #include "LAppDefine.hpp"
 #include "LAppDelegate.hpp"
@@ -26,7 +24,7 @@ LAppLive2DManager *s_instance = NULL;
 
 void FinishedMotion(ACubismMotion *self)
 {
-	blog(LOG_DEBUG, "Motion Finished: %x", self);
+	LAppPal::PrintLog("Motion Finished: %x", self);
 }
 }
 
@@ -56,12 +54,30 @@ LAppLive2DManager::LAppLive2DManager() : _viewMatrix(NULL), _sceneIndex(0)
 LAppLive2DManager::~LAppLive2DManager()
 {
 	ReleaseAllModel();
+	// カウンターを待たず速攻破棄
+	for (int i = _releaseModel.GetSize() - 1; i >= 0; i--) {
+		if (_releaseModel[i]._model) {
+			delete _releaseModel[i]._model;
+		}
+	}
+	_releaseModel.Clear();
+
+	CubismFramework::Dispose();
 }
 
 void LAppLive2DManager::ReleaseAllModel()
 {
 	for (csmUint32 i = 0; i < _models.GetSize(); i++) {
-		delete _models[i];
+		//delete _models[i]; ここでは消さない
+
+		// 削除予定の印
+		_models[i]->DeleteMark();
+
+		// 2フレーム後削除
+		ReleaseModel rel;
+		rel._model = _models[i];
+		rel._counter = 2;
+		_releaseModel.PushBack(rel);
 	}
 
 	_models.Clear();
@@ -87,14 +103,14 @@ void LAppLive2DManager::OnDrag(csmFloat32 x, csmFloat32 y) const
 
 void LAppLive2DManager::OnTap(csmFloat32 x, csmFloat32 y)
 {
-	blog(LOG_DEBUG, "Tap point: {x:%.2f y:%.2f}", x, y);
+	blog(LOG_DEBUG, "[APP]tap point: {x:%.2f y:%.2f}", x, y);
 
 	for (csmUint32 i = 0; i < _models.GetSize(); i++) {
 		if (_models[i]->HitTest(HitAreaNameHead, x, y)) {
-			blog(LOG_DEBUG, "Hit area: [%s]", HitAreaNameHead);
+			blog(LOG_DEBUG, "hit area: [%s]", HitAreaNameHead);
 			_models[i]->SetRandomExpression();
 		} else if (_models[i]->HitTest(HitAreaNameBody, x, y)) {
-			blog(LOG_DEBUG, "Hit area: [%s]", HitAreaNameBody);
+			blog(LOG_DEBUG, "hit area: [%s]", HitAreaNameBody);
 			_models[i]->StartRandomMotion(MotionGroupTapBody,
 						      PriorityNormal,
 						      FinishedMotion);
@@ -104,19 +120,31 @@ void LAppLive2DManager::OnTap(csmFloat32 x, csmFloat32 y)
 
 void LAppLive2DManager::OnUpdate() const
 {
-	CubismMatrix44 projection;
-	int width, height;
-	glfwGetWindowSize(LAppDelegate::GetInstance()->GetWindow(), &width,
-			  &height);
-	projection.Scale(1.0f, static_cast<float>(width) /
-				       static_cast<float>(height));
+	int windowWidth, windowHeight;
+	LAppDelegate::GetInstance()->GetClientSize(windowWidth, windowHeight);
 
+	// 投影用マトリックス
+	CubismMatrix44 projection = CubismMatrix44();
+	if (windowWidth != 0 && windowHeight != 0) {
+		projection.Scale(1.0f,
+				 static_cast<float>(windowWidth) /
+					 static_cast<float>(windowHeight));
+	}
+
+	// 必要があればここで乗算
 	if (_viewMatrix != NULL) {
 		projection.MultiplyByMatrix(_viewMatrix);
 	}
 
+	// D3D11 フレーム先頭処理
+	// 各フレームでの、Cubism SDK の処理前にコール
+	Rendering::CubismRenderer_D3D11::StartFrame(
+		LAppDelegate::GetInstance()->GetD3dDevice(),
+		LAppDelegate::GetInstance()->GetD3dContext(), windowWidth,
+		windowHeight);
+
 	const CubismMatrix44 saveProjection = projection;
-	csmUint32 modelCount = _models.GetSize();
+	const csmUint32 modelCount = _models.GetSize();
 	for (csmUint32 i = 0; i < modelCount; ++i) {
 		LAppModel *model = GetModel(i);
 		projection = saveProjection;
@@ -124,12 +152,18 @@ void LAppLive2DManager::OnUpdate() const
 		// モデル1体描画前コール
 		LAppDelegate::GetInstance()->GetView()->PreModelDraw(*model);
 
+		// Cubismモデルの描画
 		model->Update();
 		model->Draw(projection); ///< 参照渡しなのでprojectionは変質する
 
 		// モデル1体描画後コール
 		LAppDelegate::GetInstance()->GetView()->PostModelDraw(*model);
 	}
+
+	// D3D11 フレーム終了処理
+	// 各フレームでの、Cubism SDK の処理後にコール
+	Rendering::CubismRenderer_D3D11::EndFrame(
+		LAppDelegate::GetInstance()->GetD3dDevice());
 }
 
 void LAppLive2DManager::NextScene()
@@ -141,14 +175,13 @@ void LAppLive2DManager::NextScene()
 void LAppLive2DManager::ChangeScene(Csm::csmInt32 index)
 {
 	_sceneIndex = index;
-	blog(LOG_DEBUG, "Model index: %d", _sceneIndex);
+	blog(LOG_DEBUG, "model index: %d", _sceneIndex);
 
 	// ModelDir[]に保持したディレクトリ名から
 	// model3.jsonのパスを決定する.
 	// ディレクトリ名とmodel3.jsonの名前を一致させておくこと.
 	std::string model = ModelDir[index];
-	std::string modelPath =
-		obs_module_file("resources") + std::string("/") + model + "/";
+	std::string modelPath = ResourcesPath + model + "/";
 	std::string modelJsonName = ModelDir[index];
 	modelJsonName += ".model3.json";
 
@@ -157,10 +190,10 @@ void LAppLive2DManager::ChangeScene(Csm::csmInt32 index)
 	_models[0]->LoadAssets(modelPath.c_str(), modelJsonName.c_str());
 
 	/*
-	* モデル半透明表示を行うサンプルを提示する。
-	* ここでUSE_RENDER_TARGET、USE_MODEL_RENDER_TARGETが定義されている場合
-	* 別のレンダリングターゲットにモデルを描画し、描画結果をテクスチャとして別のスプライトに張り付ける。
-	*/
+ 	 * モデル半透明表示を行うサンプルを提示する。
+ 	 * ここでUSE_RENDER_TARGET、USE_MODEL_RENDER_TARGETが定義されている場合
+ 	 * 別のレンダリングターゲットにモデルを描画し、描画結果をテクスチャとして別のスプライトに張り付ける。
+ 	 */
 	{
 #if defined(USE_RENDER_TARGET)
 		// LAppViewの持つターゲットに描画を行う場合、こちらを選択
@@ -199,4 +232,29 @@ void LAppLive2DManager::ChangeScene(Csm::csmInt32 index)
 csmUint32 LAppLive2DManager::GetModelNum() const
 {
 	return _models.GetSize();
+}
+
+void LAppLive2DManager::EndFrame()
+{
+	// モデル解放監視
+	for (int i = _releaseModel.GetSize() - 1; i >= 0; i--) {
+		_releaseModel[i]._counter--;
+
+		if (_releaseModel[i]._counter <= 0) { // モデル削除
+			if (_releaseModel[i]._model) {
+				delete _releaseModel[i]._model;
+			}
+			// コンテナも削除
+			_releaseModel.Remove(i);
+			continue;
+		}
+	}
+}
+
+void LAppLive2DManager::ResizedWindow()
+{
+	const csmUint32 modelCount = _models.GetSize();
+	for (csmUint32 i = 0; i < modelCount; ++i) {
+		_models[i]->GetRenderBuffer().DestroyOffscreenFrame();
+	}
 }
