@@ -181,7 +181,8 @@ void LAppLive2DManager::ChangeScene(Csm::csmInt32 index)
 	// model3.jsonのパスを決定する.
 	// ディレクトリ名とmodel3.jsonの名前を一致させておくこと.
 	std::string model = ModelDir[index];
-	std::string modelPath = ResourcesPath + model + "/";
+	std::string modelPath =
+		obs_module_file("resources") + std::string("/") + model + "/";
 	std::string modelJsonName = ModelDir[index];
 	modelJsonName += ".model3.json";
 

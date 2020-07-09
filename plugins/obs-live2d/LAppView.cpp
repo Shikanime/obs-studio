@@ -115,7 +115,6 @@ void LAppView::InitializeSprite()
 
 	LAppTextureManager *textureManager =
 		LAppDelegate::GetInstance()->GetTextureManager();
-	const string resourcesPath = ResourcesPath;
 
 	float x = width * 0.5f;
 	float y = height * 0.5f;
