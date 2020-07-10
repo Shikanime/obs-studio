@@ -35,11 +35,17 @@ static void *live2d_create(obs_data_t *, obs_source_t *)
 
 void live2d_destroy(void *data)
 {
+	// 解放
 	LAppDelegate::GetInstance()->Release();
+	// インスタンス削除
+	LAppDelegate::GetInstance()->ReleaseInstance();
 	delete reinterpret_cast<obs_live2d_data *>(data);
 }
 
-void live2d_video_render(void *data, gs_effect_t *effect) {}
+void live2d_video_render(void *data, gs_effect_t *effect)
+{
+	LAppDelegate::GetInstance()->Run();
+}
 
 static uint32_t live2d_get_width(void *data)
 {

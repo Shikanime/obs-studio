@@ -78,6 +78,10 @@ public:
  	 */
 	LAppView *GetView() { return _view; }
 
+	bool GetIsInit() { return _isInit; }
+
+	void AppInit() { _isInit = false; }
+
 	/**
 	 * @brief   アプリケーションを終了するかどうか。
 	 */
@@ -156,11 +160,12 @@ private:
 	LAppAllocator _cubismAllocator;             ///< Cubism SDK Allocator
 	Csm::CubismFramework::Option _cubismOption; ///< Cubism SDK Option
 
-	LAppView *_view;                     ///< View情報
-	bool _captured;                      ///< クリックしているか
-	float _mouseX;                       ///< マウスX座標
-	float _mouseY;                       ///< マウスY座標
-	bool _isEnd;                         ///< APP終了しているか
+	LAppView *_view; ///< View情報
+	bool _captured;  ///< クリックしているか
+	float _mouseX;   ///< マウスX座標
+	float _mouseY;   ///< マウスY座標
+	bool _isEnd;     ///< APP終了しているか
+	bool _isInit;
 	LAppTextureManager *_textureManager; ///< テクスチャマネージャー
 
 	HWND _windowHandle;                  ///< ウィンドウハンドル

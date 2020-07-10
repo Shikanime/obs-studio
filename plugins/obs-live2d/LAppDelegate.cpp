@@ -307,39 +307,28 @@ void LAppDelegate::Release()
 
 void LAppDelegate::Run()
 {
-	MSG msg;
+	if (_isInit) {
+		LAppDelegate::GetInstance()->Initialize();
+		AppInit();
+	} else {
+		// 時間更新
+		LAppPal::UpdateTime();
 
-	do {
-		//メッセージループ
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		} else {
-			// 時間更新
-			LAppPal::UpdateTime();
+		// 画面クリアなど
+		StartFrame();
 
-			// 画面クリアなど
-			StartFrame();
+		// 描画
+		_view->Render();
 
-			// 描画
-			_view->Render();
+		// フレーム末端処理
+		EndFrame();
+	}
 
-			// フレーム末端処理
-			EndFrame();
-
-			// アプリケーション終了メッセージでウィンドウを破棄する
-			if (GetIsEnd() &&
-			    _windowHandle != NULL) { // ウィンドウ破壊
-				DestroyWindow(_windowHandle);
-				_windowHandle = NULL;
-			}
-		}
-	} while (msg.message != WM_QUIT);
-
-	// 解放
-	Release();
-	// インスタンス削除
-	ReleaseInstance();
+	// アプリケーション終了メッセージでウィンドウを破棄する
+	if (GetIsEnd() && _windowHandle != NULL) { // ウィンドウ破壊
+		DestroyWindow(_windowHandle);
+		_windowHandle = NULL;
+	}
 }
 
 LAppDelegate::LAppDelegate()
@@ -347,6 +336,7 @@ LAppDelegate::LAppDelegate()
 	  _mouseX(0.0f),
 	  _mouseY(0.0f),
 	  _isEnd(false),
+	  _isInit(true),
 	  _textureManager(NULL),
 	  _windowHandle(NULL),
 	  _device(NULL),
